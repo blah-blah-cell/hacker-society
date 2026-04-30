@@ -1,0 +1,16 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    nmap \
+    curl \
+    python3 \
+    python3-pip \
+    netcat-openbsd \
+    iputils-ping \
+    dnsutils \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up a working directory
+WORKDIR /workspace
+CMD ["tail", "-f", "/dev/null"]

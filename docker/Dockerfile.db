@@ -1,0 +1,14 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    bash \
+    net-tools \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Simple HTTP server that serves files from /tmp
+# The flag will be injected into /tmp/flag.txt
+CMD ["python3", "-m", "http.server", "8080", "--directory", "/tmp"]

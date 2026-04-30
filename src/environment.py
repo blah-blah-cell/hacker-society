@@ -6,59 +6,81 @@ class Environment:
     def __init__(self, prefix="hacker_society"):
         self.client = docker.from_env()
         self.prefix = prefix
-        self.network_name = f"{self.prefix}_net_{uuid.uuid4().hex[:8]}"
-        self.network = None
+
+        # We will create two networks
+        self.public_network_name = f"{self.prefix}_public_{uuid.uuid4().hex[:8]}"
+        self.internal_network_name = f"{self.prefix}_internal_{uuid.uuid4().hex[:8]}"
+
+        self.public_network = None
+        self.internal_network = None
+
         self.attacker_container = None
         self.defender_container = None
+        self.db_container = None
 
-    def setup(self, secret_flag: str):
+    def setup(self, secret_flag: str, vuln_choice: int):
         print("Building images...")
         self.client.images.build(path="./docker", dockerfile="Dockerfile.attacker", tag=f"{self.prefix}_attacker")
         self.client.images.build(path="./docker", dockerfile="Dockerfile.defender", tag=f"{self.prefix}_defender")
+        self.client.images.build(path="./docker", dockerfile="Dockerfile.db", tag=f"{self.prefix}_db")
 
-        print(f"Creating network: {self.network_name}")
-        self.network = self.client.networks.create(self.network_name, driver="bridge")
+        print(f"Creating public network: {self.public_network_name}")
+        self.public_network = self.client.networks.create(self.public_network_name, driver="bridge")
 
-        print("Starting defender container...")
+        print(f"Creating internal network: {self.internal_network_name}")
+        self.internal_network = self.client.networks.create(self.internal_network_name, driver="bridge")
+
+        print("Starting internal DB container...")
+        self.db_container = self.client.containers.run(
+            f"{self.prefix}_db",
+            name=f"{self.prefix}_db_{uuid.uuid4().hex[:8]}",
+            network=self.internal_network_name,
+            detach=True,
+            tty=True
+        )
+
+        print("Starting defender container on public network...")
         self.defender_container = self.client.containers.run(
             f"{self.prefix}_defender",
             name=f"{self.prefix}_defender_{uuid.uuid4().hex[:8]}",
-            network=self.network_name,
+            network=self.public_network_name,
+            environment={"VULN_CHOICE": str(vuln_choice)},
             detach=True,
             tty=True
         )
 
-        print("Starting attacker container...")
+        print("Connecting defender container to internal network...")
+        self.internal_network.connect(self.defender_container)
+
+        print("Starting attacker container on public network...")
         self.attacker_container = self.client.containers.run(
             f"{self.prefix}_attacker",
             name=f"{self.prefix}_attacker_{uuid.uuid4().hex[:8]}",
-            network=self.network_name,
+            network=self.public_network_name,
             detach=True,
             tty=True
         )
 
-        # Inject the secret flag into the defender container
-        # Note: In a real scenario, this might be more complex, but for Phase 1 we write it to a file.
+        # Inject the secret flag into the DB container
         flag_path = "/tmp/flag.txt"
-        print(f"Injecting flag into defender container at {flag_path}...")
-
-        # We can use 'exec_run' to echo the string into a file
-        # Safe to do since we control secret_flag and the environment
+        print(f"Injecting flag into internal DB container at {flag_path}...")
         command = f"bash -c 'echo \"{secret_flag}\" > {flag_path}'"
-        self.defender_container.exec_run(command)
+        self.db_container.exec_run(command)
 
-        # Give the server a moment to start
+        # Give the services a moment to start
         time.sleep(2)
 
         # Get IP addresses
         self.defender_container.reload()
         self.attacker_container.reload()
+        self.db_container.reload()
 
-        defender_ip = self.defender_container.attrs['NetworkSettings']['Networks'][self.network_name]['IPAddress']
+        defender_ip = self.defender_container.attrs['NetworkSettings']['Networks'][self.public_network_name]['IPAddress']
 
         return {
             "attacker_id": self.attacker_container.id,
             "defender_id": self.defender_container.id,
+            "db_id": self.db_container.id,
             "defender_ip": defender_ip
         }
 
@@ -94,9 +116,24 @@ class Environment:
             except Exception as e:
                 print(f"Error removing defender: {e}")
 
-        if self.network:
+        if self.db_container:
             try:
-                self.network.remove()
-                print("Network removed.")
+                self.db_container.stop(timeout=1)
+                self.db_container.remove()
+                print("DB container removed.")
             except Exception as e:
-                print(f"Error removing network: {e}")
+                print(f"Error removing DB container: {e}")
+
+        if self.public_network:
+            try:
+                self.public_network.remove()
+                print("Public network removed.")
+            except Exception as e:
+                print(f"Error removing public network: {e}")
+
+        if self.internal_network:
+            try:
+                self.internal_network.remove()
+                print("Internal network removed.")
+            except Exception as e:
+                print(f"Error removing internal network: {e}")

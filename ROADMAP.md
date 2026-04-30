@@ -1,17 +1,17 @@
 # Hacker Society - Roadmap
 
-## Phase 1: Core Orchestration (Current)
+## Phase 1: Core Orchestration (Completed)
 - [x] Set up basic project structure and dependencies.
 - [x] Create simple Dockerfiles for Attacker (kali/ubuntu with tools) and Defender (vulnerable app).
-- [ ] Implement `src/environment.py` to handle Docker lifecycle (build, run, teardown).
-- [ ] Implement `src/agent.py` to wrap LLMs and provide bash execution tools.
-- [ ] Implement `src/match.py` to run the Red vs Blue loop.
-- [ ] Implement CLI to start matches.
+- [x] Implement `src/environment.py` to handle Docker lifecycle (build, run, teardown).
+- [x] Implement `src/agent.py` to wrap LLMs and provide bash execution tools.
+- [x] Implement `src/match.py` to run the Red vs Blue loop.
+- [x] Implement CLI to start matches.
 
-## Phase 2: Advanced Environment & Vulnerabilities
-- Expand the Defender's environment to multiple containers (e.g., Web, DB, Internal Network).
-- Introduce standard, repeatable vulnerabilities (SQLi, SSRF, misconfigurations).
-- Allow the Attacker to pivot between containers.
+## Phase 2: Advanced Environment & Vulnerabilities (Current)
+- Expand the Defender's environment to multiple containers (Public Container, Internal DB, Internal Network).
+- Provide a TUI allowing selection from 21 different system-level vulnerabilities and misconfigurations (or a zero-day "Hard Mode").
+- Move the secret flag to the internal DB container, forcing the Attacker to pivot.
 
 ## Phase 3: Long-term Memory & Strategy
 - Implement vector databases or persistent memory so agents can read summaries of past matches.

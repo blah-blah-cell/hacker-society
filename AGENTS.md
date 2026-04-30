@@ -18,10 +18,10 @@ This project is an autonomous dual-model cyber range. It orchestrates matches be
   - `environment.py`: Docker orchestration (building, networks, containers).
   - `agent.py`: LLM wrapper and tool calling logic.
   - `match.py`: The main loop orchestrating turns/time and logging.
-  - `main.py`: CLI entry point.
+  - `main.py`: CLI entry point (includes TUI for vulnerability selection).
 
 ## Agent Guidelines
-1. Always prioritize isolation: ensure Docker networks and containers are isolated correctly.
+1. Always prioritize isolation: ensure Docker networks and containers are isolated correctly (e.g., internal networks must not be accessible to the attacker directly).
 2. Rely on standard Python libraries when possible to keep dependencies light.
 3. Make sure error handling is robust, especially for Docker daemon connections and LLM API timeouts.
 4. Keep the RL/Fine-tuning goal in mind: ensure comprehensive logging of the state, agent prompt, tool usage, and output.

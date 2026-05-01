@@ -13,11 +13,11 @@
 - [x] Provide a TUI allowing selection from 21 different system-level vulnerabilities and misconfigurations (or a zero-day "Hard Mode").
 - [x] Move the secret flag to the internal DB container, forcing the Attacker to pivot.
 
-## Phase 3: Long-term Memory & Strategy (Current)
-- Implement vector databases or persistent memory so agents can read summaries of past matches.
-- Allow agents to build a "knowledge base" of the specific environment across multiple rounds.
+## Phase 3: Long-term Memory & Strategy (Completed)
+- [x] Implement vector databases or persistent memory so agents can read summaries of past matches.
+- [x] Allow agents to build a "knowledge base" of the specific environment across multiple rounds.
 
-## Phase 4: Reinforcement Learning & Fine-tuning
+## Phase 4: Reinforcement Learning & Fine-tuning (Current)
 - Build data pipelines to export match logs into a dataset (e.g., ShareGPT format).
 - Set up an automated fine-tuning pipeline (e.g., using Unsloth or similar tools) to update the model weights after a set of matches based on win/loss outcomes (RLHF/DPO).
 

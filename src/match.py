@@ -22,7 +22,11 @@ class Match:
             "timestamp": datetime.now().isoformat(),
             "secret_flag": self.secret_flag,
             "turns": [],
-            "outcome": None
+            "outcome": None,
+            "rewards": {
+                "attacker": 0.0,
+                "defender": 0.0
+            }
         }
 
     def run(self, defender_ip: str):
@@ -80,6 +84,8 @@ class Match:
                 if self.secret_flag in attacker_action:
                     print("\n!!! ATTACKER WINS: FLAG EXFILTRATED !!!")
                     self.logs["outcome"] = "attacker_win"
+                    self.logs["rewards"]["attacker"] = 1.0
+                    self.logs["rewards"]["defender"] = -1.0
                     self.save_logs()
                     self._summarize_match()
                     return "attacker_win"
@@ -88,6 +94,8 @@ class Match:
 
         print("\n!!! DEFENDER WINS: TIME LIMIT REACHED !!!")
         self.logs["outcome"] = "defender_win"
+        self.logs["rewards"]["attacker"] = -1.0
+        self.logs["rewards"]["defender"] = 1.0
         self.save_logs()
         self._summarize_match()
         return "defender_win"

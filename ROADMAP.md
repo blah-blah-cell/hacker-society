@@ -8,12 +8,12 @@
 - [x] Implement `src/match.py` to run the Red vs Blue loop.
 - [x] Implement CLI to start matches.
 
-## Phase 2: Advanced Environment & Vulnerabilities (Current)
-- Expand the Defender's environment to multiple containers (Public Container, Internal DB, Internal Network).
-- Provide a TUI allowing selection from 21 different system-level vulnerabilities and misconfigurations (or a zero-day "Hard Mode").
-- Move the secret flag to the internal DB container, forcing the Attacker to pivot.
+## Phase 2: Advanced Environment & Vulnerabilities (Completed)
+- [x] Expand the Defender's environment to multiple containers (Public Container, Internal DB, Internal Network).
+- [x] Provide a TUI allowing selection from 21 different system-level vulnerabilities and misconfigurations (or a zero-day "Hard Mode").
+- [x] Move the secret flag to the internal DB container, forcing the Attacker to pivot.
 
-## Phase 3: Long-term Memory & Strategy
+## Phase 3: Long-term Memory & Strategy (Current)
 - Implement vector databases or persistent memory so agents can read summaries of past matches.
 - Allow agents to build a "knowledge base" of the specific environment across multiple rounds.
 

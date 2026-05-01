@@ -38,8 +38,30 @@ class Agent:
                         "required": ["command"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_memory",
+                    "description": "Search your long-term memory for past experiences or successful commands related to a specific query.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The keyword or topic to search for."
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
             }
         ]
+
+        self.memory_store = None
+
+    def set_memory_store(self, memory_store):
+        self.memory_store = memory_store
 
     def add_message(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
@@ -76,6 +98,28 @@ class Agent:
                     output = self.environment.execute_in_container(self.role, command)
 
                     print(f"[{self.role.upper()} OUT]:\n{output[:500]}{'...' if len(output) > 500 else ''}")
+
+                    # Feed output back to agent
+                    self.messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": tool_call.function.name,
+                        "content": output
+                    })
+                elif tool_call.function.name == "search_memory":
+                    args = json.loads(tool_call.function.arguments)
+                    query = args.get("query", "")
+
+                    print(f"[{self.role.upper()} SEARCH_MEMORY]: {query}")
+
+                    if self.memory_store:
+                        results = self.memory_store.search_memory(self.role, query)
+                        if results:
+                            output = "Found memories:\n" + "\n".join(f"- {res}" for res in results)
+                        else:
+                            output = "No matching memories found."
+                    else:
+                        output = "Memory store is not available."
 
                     # Feed output back to agent
                     self.messages.append({

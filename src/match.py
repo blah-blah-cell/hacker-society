@@ -5,13 +5,14 @@ import os
 from datetime import datetime
 
 class Match:
-    def __init__(self, attacker_agent, defender_agent, environment, secret_flag: str, max_turns=10):
+    def __init__(self, attacker_agent, defender_agent, environment, secret_flag: str, max_turns=10, memory_store=None):
         self.attacker = attacker_agent
         self.defender = defender_agent
         self.environment = environment
         self.secret_flag = secret_flag
         self.max_turns = max_turns
         self.current_turn = 0
+        self.memory_store = memory_store
 
         self.match_id = uuid.uuid4().hex[:8]
         self.log_file = f"match_{self.match_id}_log.json"
@@ -80,6 +81,7 @@ class Match:
                     print("\n!!! ATTACKER WINS: FLAG EXFILTRATED !!!")
                     self.logs["outcome"] = "attacker_win"
                     self.save_logs()
+                    self._summarize_match()
                     return "attacker_win"
                 else:
                     print("\nAttacker attempted exfiltration but the flag was incorrect.")
@@ -87,7 +89,28 @@ class Match:
         print("\n!!! DEFENDER WINS: TIME LIMIT REACHED !!!")
         self.logs["outcome"] = "defender_win"
         self.save_logs()
+        self._summarize_match()
         return "defender_win"
+
+    def _summarize_match(self):
+        if not self.memory_store:
+            return
+
+        print("\n--- MATCH CONCLUDED: GENERATING SUMMARIES ---")
+        summary_instruction = (
+            "The match is over. Summarize your findings, successful commands, and the environment topology in a few concise sentences. "
+            "Do not output anything other than the summary."
+        )
+
+        print(">> Generating Defender Summary...")
+        defender_summary = self.defender.take_turn(summary_instruction)
+        self.memory_store.add_memory("defender", defender_summary)
+        print(f"[DEFENDER SUMMARY]: {defender_summary}")
+
+        print(">> Generating Attacker Summary...")
+        attacker_summary = self.attacker.take_turn(summary_instruction)
+        self.memory_store.add_memory("attacker", attacker_summary)
+        print(f"[ATTACKER SUMMARY]: {attacker_summary}")
 
     def save_logs(self):
         # We save this for RL / Fine-tuning in future phases

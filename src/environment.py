@@ -14,11 +14,31 @@ class Environment:
         self.public_network = None
         self.internal_network = None
 
-        self.attacker_container = None
-        self.defender_container = None
+        self.attacker_containers = {}
+        self.defender_containers = {}
         self.db_container = None
 
-    def setup(self, secret_flag: str, vuln_choice: int):
+        self.orchestration_mode = "docker" # Scaffolding: Future options 'swarm', 'kubernetes'
+
+    def setup(self, secret_flag: str, vuln_choice: int, num_attackers: int = 1, num_defenders: int = 1):
+        # Scaffolding for distributed orchestration
+        if self.orchestration_mode == "kubernetes":
+            print("Kubernetes orchestration not yet implemented.")
+            return {}
+        elif self.orchestration_mode == "swarm":
+            print("Docker Swarm orchestration not yet implemented.")
+            return {}
+
+        import os
+        if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
+            print("MOCK DOCKER ENV: Bypassing real container setup for testing.")
+            return {
+                "attacker_ids": {f"attacker_{i}": f"mock_att_{i}" for i in range(num_attackers)},
+                "defender_ids": {f"defender_{i}": f"mock_def_{i}" for i in range(num_defenders)},
+                "db_id": "mock_db",
+                "defender_ips": ["10.0.0.2", "10.0.0.3"][:num_defenders]
+            }
+
         print("Building images...")
         self.client.images.build(path="./docker", dockerfile="Dockerfile.attacker", tag=f"{self.prefix}_attacker")
         self.client.images.build(path="./docker", dockerfile="Dockerfile.defender", tag=f"{self.prefix}_defender")
@@ -39,27 +59,31 @@ class Environment:
             tty=True
         )
 
-        print("Starting defender container on public network...")
-        self.defender_container = self.client.containers.run(
-            f"{self.prefix}_defender",
-            name=f"{self.prefix}_defender_{uuid.uuid4().hex[:8]}",
-            network=self.public_network_name,
-            environment={"VULN_CHOICE": str(vuln_choice)},
-            detach=True,
-            tty=True
-        )
+        defender_ips = []
+        for i in range(num_defenders):
+            print(f"Starting defender container {i+1}/{num_defenders} on public network...")
+            defender_container = self.client.containers.run(
+                f"{self.prefix}_defender",
+                name=f"{self.prefix}_defender_{uuid.uuid4().hex[:8]}",
+                network=self.public_network_name,
+                environment={"VULN_CHOICE": str(vuln_choice)},
+                detach=True,
+                tty=True
+            )
+            print(f"Connecting defender container {i+1} to internal network...")
+            self.internal_network.connect(defender_container)
+            self.defender_containers[f"defender_{i}"] = defender_container
 
-        print("Connecting defender container to internal network...")
-        self.internal_network.connect(self.defender_container)
-
-        print("Starting attacker container on public network...")
-        self.attacker_container = self.client.containers.run(
-            f"{self.prefix}_attacker",
-            name=f"{self.prefix}_attacker_{uuid.uuid4().hex[:8]}",
-            network=self.public_network_name,
-            detach=True,
-            tty=True
-        )
+        for i in range(num_attackers):
+            print(f"Starting attacker container {i+1}/{num_attackers} on public network...")
+            attacker_container = self.client.containers.run(
+                f"{self.prefix}_attacker",
+                name=f"{self.prefix}_attacker_{uuid.uuid4().hex[:8]}",
+                network=self.public_network_name,
+                detach=True,
+                tty=True
+            )
+            self.attacker_containers[f"attacker_{i}"] = attacker_container
 
         # Inject the secret flag into the DB container
         flag_path = "/tmp/flag.txt"
@@ -71,24 +95,32 @@ class Environment:
         time.sleep(2)
 
         # Get IP addresses
-        self.defender_container.reload()
-        self.attacker_container.reload()
         self.db_container.reload()
 
-        defender_ip = self.defender_container.attrs['NetworkSettings']['Networks'][self.public_network_name]['IPAddress']
+        for name, container in self.defender_containers.items():
+            container.reload()
+            ip = container.attrs['NetworkSettings']['Networks'][self.public_network_name]['IPAddress']
+            defender_ips.append(ip)
+
+        for name, container in self.attacker_containers.items():
+            container.reload()
 
         return {
-            "attacker_id": self.attacker_container.id,
-            "defender_id": self.defender_container.id,
+            "attacker_ids": {k: v.id for k, v in self.attacker_containers.items()},
+            "defender_ids": {k: v.id for k, v in self.defender_containers.items()},
             "db_id": self.db_container.id,
-            "defender_ip": defender_ip
+            "defender_ips": defender_ips
         }
 
-    def execute_in_container(self, role: str, command: str) -> str:
+    def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
         """Executes a bash command in the specified container and returns output."""
-        container = self.attacker_container if role == "attacker" else self.defender_container
+        import os
+        if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
+            return f"MOCK OUTPUT: '{command}' executed successfully."
+
+        container = self.attacker_containers.get(agent_id) if role == "attacker" else self.defender_containers.get(agent_id)
         if not container:
-            return "Error: Container not running."
+            return f"Error: Container for agent {agent_id} not running."
 
         try:
             # We use bash -c to support pipes and redirects if the agent tries to use them
@@ -100,21 +132,21 @@ class Environment:
 
     def teardown(self):
         print("Tearing down environment...")
-        if self.attacker_container:
+        for name, container in self.attacker_containers.items():
             try:
-                self.attacker_container.stop(timeout=1)
-                self.attacker_container.remove()
-                print("Attacker container removed.")
+                container.stop(timeout=1)
+                container.remove()
+                print(f"Attacker container {name} removed.")
             except Exception as e:
-                print(f"Error removing attacker: {e}")
+                print(f"Error removing attacker {name}: {e}")
 
-        if self.defender_container:
+        for name, container in self.defender_containers.items():
             try:
-                self.defender_container.stop(timeout=1)
-                self.defender_container.remove()
-                print("Defender container removed.")
+                container.stop(timeout=1)
+                container.remove()
+                print(f"Defender container {name} removed.")
             except Exception as e:
-                print(f"Error removing defender: {e}")
+                print(f"Error removing defender {name}: {e}")
 
         if self.db_container:
             try:

@@ -17,10 +17,10 @@
 - [x] Implement vector databases or persistent memory so agents can read summaries of past matches.
 - [x] Allow agents to build a "knowledge base" of the specific environment across multiple rounds.
 
-## Phase 4: Reinforcement Learning & Fine-tuning (Current)
-- Build data pipelines to export match logs into a dataset (e.g., ShareGPT format).
-- Set up an automated fine-tuning pipeline (e.g., using Unsloth or similar tools) to update the model weights after a set of matches based on win/loss outcomes (RLHF/DPO).
+## Phase 4: Reinforcement Learning & Fine-tuning (Completed)
+- [x] Build data pipelines to export match logs into a dataset (e.g., ShareGPT format).
+- [x] Set up an automated fine-tuning pipeline (e.g., using Unsloth or similar tools) to update the model weights after a set of matches based on win/loss outcomes (RLHF/DPO).
 
-## Phase 5: Scalability
+## Phase 5: Scalability (Current)
 - Support large-scale matches with N attackers vs M defenders.
 - Support Kubernetes or Swarm for distributed container orchestration.

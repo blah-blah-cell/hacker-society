@@ -1,0 +1,85 @@
+# configs.yaml.example
+#
+# Copy this to configs.yaml and fill in your values.
+# Pass it to hacker-society with:  --config configs.yaml
+#
+# Supported providers (auto-resolves base_url and key env var):
+#   openai | groq | together | mistral | deepseek | cohere | fireworks
+#   anyscale | perplexity | ollama | vllm | lmstudio | jan | textgen | mock
+#
+# You can also skip 'provider' entirely and set base_url + api_key directly.
+
+# ---------------------------------------------------------------------------
+# Example 1: OpenAI GPT-4o attacking against a local Llama 3 defender
+# ---------------------------------------------------------------------------
+# attacker:
+#   model: gpt-4o
+#   provider: openai
+#   temperature: 0.8
+#
+# defender:
+#   model: llama3
+#   provider: ollama
+
+# ---------------------------------------------------------------------------
+# Example 2: Groq (fast inference) vs Together AI
+# ---------------------------------------------------------------------------
+# attacker:
+#   model: llama3-70b-8192
+#   provider: groq
+#   temperature: 0.7
+#   max_tokens: 2048
+#
+# defender:
+#   model: mistralai/Mixtral-8x7B-Instruct-v0.1
+#   provider: together
+
+# ---------------------------------------------------------------------------
+# Example 3: Two local vLLM servers on different GPUs
+# ---------------------------------------------------------------------------
+# attacker:
+#   model: meta-llama/Meta-Llama-3-70B-Instruct
+#   base_url: http://localhost:8000/v1
+#   api_key: dummy
+#   temperature: 0.9
+#
+# defender:
+#   model: mistralai/Mistral-7B-Instruct-v0.3
+#   base_url: http://localhost:8001/v1
+#   api_key: dummy
+
+# ---------------------------------------------------------------------------
+# Example 4: DeepSeek-R1 vs Mistral (both cloud)
+# ---------------------------------------------------------------------------
+# attacker:
+#   model: deepseek-reasoner
+#   provider: deepseek
+#
+# defender:
+#   model: mistral-large-latest
+#   provider: mistral
+
+# ---------------------------------------------------------------------------
+# Example 5: Offline mock test
+# ---------------------------------------------------------------------------
+# attacker:
+#   model: mock-model
+#   provider: mock
+#
+# defender:
+#   model: mock-model
+#   provider: mock
+
+# ---------------------------------------------------------------------------
+# Active config — edit this block:
+# ---------------------------------------------------------------------------
+
+attacker:
+  model: gpt-4o-mini
+  provider: openai
+  temperature: 0.8
+
+defender:
+  model: gpt-4o-mini
+  provider: openai
+  temperature: 0.4

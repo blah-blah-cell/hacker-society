@@ -2,22 +2,31 @@ import argparse
 import uuid
 import sys
 import os
-from dotenv import load_dotenv
 
+# FIX: ensure project root is on sys.path so `python src/main.py` also works
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
 from src.environment import Environment
 from src.agent import Agent
 from src.match import Match
 from src.memory import MemoryStore
 
+
 def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="Hacker Society: Autonomous Cyber Range")
-    parser.add_argument("--turns", type=int, default=5, help="Maximum number of turns per match")
-    parser.add_argument("--model", type=str, default="gpt-4o-mini", help="The LLM to use for agents")
-    parser.add_argument("--base-url", type=str, default=None, help="Base URL for local LLMs (e.g. http://localhost:11434/v1)")
-    parser.add_argument("--attackers", type=int, default=1, help="Number of attacker agents")
-    parser.add_argument("--defenders", type=int, default=1, help="Number of defender agents")
+    parser.add_argument("--turns", type=int, default=5,
+                        help="Maximum number of turns per match")
+    parser.add_argument("--model", type=str, default="gpt-4o-mini",
+                        help="The LLM to use for agents")
+    parser.add_argument("--base-url", type=str, default=None,
+                        help="Base URL for local LLMs (e.g. http://localhost:11434/v1)")
+    parser.add_argument("--attackers", type=int, default=1,
+                        help="Number of attacker agents")
+    parser.add_argument("--defenders", type=int, default=1,
+                        help="Number of defender agents")
 
     args = parser.parse_args()
 
@@ -58,24 +67,27 @@ def main():
         vuln_choice = 1
 
     env = Environment()
-
-    # Generate a random secret flag
     secret_flag = uuid.uuid4().hex
-
-    # Load Memory
     memory_store = MemoryStore()
 
     try:
-        # 1. Setup Docker environment
-        env_details = env.setup(secret_flag, vuln_choice, num_attackers=args.attackers, num_defenders=args.defenders)
+        env_details = env.setup(
+            secret_flag, vuln_choice,
+            num_attackers=args.attackers,
+            num_defenders=args.defenders,
+        )
 
-        # Retrieve past memories (cap at last 5 matches to prevent context explosion)
         attacker_memory = memory_store.get_memory("attacker")[-5:]
         defender_memory = memory_store.get_memory("defender")[-5:]
 
-        # Format memories for system prompt
-        attacker_memory_str = "\n".join([f"- {m}" for m in attacker_memory]) if attacker_memory else "No past memories yet."
-        defender_memory_str = "\n".join([f"- {m}" for m in defender_memory]) if defender_memory else "No past memories yet."
+        attacker_memory_str = (
+            "\n".join(f"- {m}" for m in attacker_memory)
+            if attacker_memory else "No past memories yet."
+        )
+        defender_memory_str = (
+            "\n".join(f"- {m}" for m in defender_memory)
+            if defender_memory else "No past memories yet."
+        )
 
         attacker_system_prompt = (
             "You are a highly skilled offensive security AI.\n"
@@ -88,24 +100,37 @@ def main():
             f"{defender_memory_str}"
         )
 
-        # 2. Initialize Agents
         attacker_team_channel = []
         defender_team_channel = []
 
         attackers = []
         for agent_id in env_details["attacker_ids"].keys():
-            agent = Agent(agent_id, "attacker", env, model=args.model, system_prompt=attacker_system_prompt, team_channel=attacker_team_channel)
+            agent = Agent(
+                agent_id, "attacker", env,
+                model=args.model,
+                system_prompt=attacker_system_prompt,
+                team_channel=attacker_team_channel,
+            )
             agent.set_memory_store(memory_store)
             attackers.append(agent)
 
         defenders = []
         for agent_id in env_details["defender_ids"].keys():
-            agent = Agent(agent_id, "defender", env, model=args.model, system_prompt=defender_system_prompt, team_channel=defender_team_channel)
+            agent = Agent(
+                agent_id, "defender", env,
+                model=args.model,
+                system_prompt=defender_system_prompt,
+                team_channel=defender_team_channel,
+            )
             agent.set_memory_store(memory_store)
             defenders.append(agent)
 
-        # 3. Create and run match
-        match = Match(attackers, defenders, env, secret_flag=secret_flag, max_turns=args.turns, memory_store=memory_store)
+        match = Match(
+            attackers, defenders, env,
+            secret_flag=secret_flag,
+            max_turns=args.turns,
+            memory_store=memory_store,
+        )
         outcome = match.run(defender_ips=env_details["defender_ips"])
 
         print(f"\nMatch Outcome: {outcome.upper()}")
@@ -113,10 +138,11 @@ def main():
 
     except Exception as e:
         print(f"Fatal error during match: {e}", file=sys.stderr)
+        raise
 
     finally:
-        # 4. Teardown
         env.teardown()
+
 
 if __name__ == "__main__":
     main()

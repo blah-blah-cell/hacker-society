@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "hacker-society"
+version = "0.1.0"
+description = "Autonomous AI Cyber Range — attacker vs defender LLM agents in Docker"
+requires-python = ">=3.10"
+dependencies = [
+    "docker",
+    "openai",
+    "pydantic",
+    "python-dotenv",
+    "numpy",
+    "scikit-learn",
+]
+
+[project.scripts]
+hacker-society = "src.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

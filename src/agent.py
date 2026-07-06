@@ -119,8 +119,11 @@ class Agent:
     HISTORY_WINDOW = 30
 
     def _pruned_messages(self) -> list[dict]:
-        system_msgs = [m for m in self.messages if m.get("role") == "system"]
-        non_system  = [m for m in self.messages if m.get("role") != "system"]
+        def get_role(m):
+            return m.role if hasattr(m, "role") else m.get("role")
+
+        system_msgs = [m for m in self.messages if get_role(m) == "system"]
+        non_system  = [m for m in self.messages if get_role(m) != "system"]
         if len(non_system) > self.HISTORY_WINDOW:
             non_system = non_system[-self.HISTORY_WINDOW:]
         return system_msgs + non_system

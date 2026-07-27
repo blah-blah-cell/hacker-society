@@ -145,7 +145,7 @@ def setup_vuln_21():
     # Hard Mode
     print("Setting up Vulnerability 21: Hard Mode (Standard SSH, secure config)")
     os.system("mkdir -p /var/run/sshd")
-    os.system("echo 'root:$(openssl rand -base64 32)' | chpasswd")
+    os.system('echo "root:$(openssl rand -base64 32)" | chpasswd')
     with open('/etc/ssh/sshd_config', 'a') as f:
         f.write("\nPermitRootLogin no\nPasswordAuthentication no\n")
     subprocess.Popen(["/usr/sbin/sshd", "-D"])

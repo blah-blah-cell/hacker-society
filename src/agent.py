@@ -118,12 +118,21 @@ class Agent:
     # ------------------------------------------------------------------ #
     HISTORY_WINDOW = 30
 
-    def _pruned_messages(self) -> list[dict]:
-        system_msgs = [m for m in self.messages if m.get("role") == "system"]
-        non_system  = [m for m in self.messages if m.get("role") != "system"]
+    def _pruned_messages(self) -> list:
+        def _get_role(m):
+            if isinstance(m, dict):
+                return m.get("role")
+            return getattr(m, "role", None)
+
+        system_msgs = [m for m in self.messages if _get_role(m) == "system"]
+        non_system  = [m for m in self.messages if _get_role(m) != "system"]
         if len(non_system) > self.HISTORY_WINDOW:
             non_system = non_system[-self.HISTORY_WINDOW:]
+            # Prevent starting the message slice on an orphaned tool message
+            while non_system and _get_role(non_system[0]) == "tool":
+                non_system.pop(0)
         return system_msgs + non_system
+
 
     # ------------------------------------------------------------------ #
     # Tool dispatch                                                        #

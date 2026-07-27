@@ -151,6 +151,7 @@ def setup_vuln_21():
     subprocess.Popen(["/usr/sbin/sshd", "-D"])
 
 def main():
+    os.makedirs('/app', exist_ok=True)
     vuln_choice = os.environ.get("VULN_CHOICE", "1")
 
     try:

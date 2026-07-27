@@ -94,10 +94,12 @@ class Environment:
             )
             self.attacker_containers[f"attacker_{i}"] = attacker_container
 
-        # FIX: write flag via exec list (no shell interpolation / injection risk)
+        # Write flag safely using base64 encoding (prevents shell injection)
+        import base64
+        flag_b64 = base64.b64encode(secret_flag.encode("utf-8")).decode("ascii")
         flag_path = "/tmp/flag.txt"
         print(f"Injecting flag into DB container at {flag_path}...")
-        self.db_container.exec_run(["bash", "-c", f"printf '%s' '{secret_flag}' > {flag_path}"])
+        self.db_container.exec_run(["bash", "-c", f"echo -n '{flag_b64}' | base64 -d > {flag_path}"])
 
         time.sleep(2)
 

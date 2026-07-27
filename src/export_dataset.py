@@ -17,21 +17,22 @@ def export_to_sharegpt(logs_dir="logs", output_file="dataset.jsonl"):
         rewards = match_data.get("rewards", {"attacker": 0.0, "defender": 0.0})
         turns = match_data.get("turns", [])
 
-        # We can extract conversation for the attacker and defender separately
         # Attacker trace
         attacker_conversations = []
         for turn in turns:
+            turn_num = turn.get("turn_number", 1)
             for event in turn.get("events", []):
                 if event.get("role") == "attacker":
-                    # Map 'attacker' to 'assistant' (since the model plays this role)
-                    attacker_conversations.append({
-                        "from": "gpt",
-                        "value": event.get("action", "")
-                    })
-                elif event.get("role") == "defender":
-                    # Actions from the other side or environment might be "user" or environment feedback
-                    # For a simple format, we just keep the assistant's actions and assume prompts are tracked elsewhere or implicitly
-                    pass
+                    action = event.get("action", "")
+                    if action:
+                        attacker_conversations.append({
+                            "from": "human",
+                            "value": f"Turn {turn_num}: Execute next action to compromise target and exfiltrate flag."
+                        })
+                        attacker_conversations.append({
+                            "from": "gpt",
+                            "value": action
+                        })
 
         if attacker_conversations:
             dataset.append({
@@ -44,12 +45,19 @@ def export_to_sharegpt(logs_dir="logs", output_file="dataset.jsonl"):
         # Defender trace
         defender_conversations = []
         for turn in turns:
+            turn_num = turn.get("turn_number", 1)
             for event in turn.get("events", []):
                 if event.get("role") == "defender":
-                    defender_conversations.append({
-                        "from": "gpt",
-                        "value": event.get("action", "")
-                    })
+                    action = event.get("action", "")
+                    if action:
+                        defender_conversations.append({
+                            "from": "human",
+                            "value": f"Turn {turn_num}: Harden environment, block attacker IPs, and prevent flag exfiltration."
+                        })
+                        defender_conversations.append({
+                            "from": "gpt",
+                            "value": action
+                        })
 
         if defender_conversations:
             dataset.append({

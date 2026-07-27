@@ -29,7 +29,7 @@ class Match:
         # FIX: store a HASH of the flag in logs, never the plaintext
         flag_hash = hashlib.sha256(secret_flag.encode()).hexdigest()
 
-        self.logs = {
+        self.logs: dict[str, object] = {
             "match_id": self.match_id,
             "timestamp": datetime.now().isoformat(),
             "secret_flag_sha256": flag_hash,   # was: "secret_flag": secret_flag

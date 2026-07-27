@@ -119,8 +119,11 @@ class Agent:
     HISTORY_WINDOW = 30
 
     def _pruned_messages(self) -> list[dict]:
-        system_msgs = [m for m in self.messages if m.get("role") == "system"]
-        non_system  = [m for m in self.messages if m.get("role") != "system"]
+        def get_role(m):
+            return m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
+
+        system_msgs = [m for m in self.messages if get_role(m) == "system"]
+        non_system  = [m for m in self.messages if get_role(m) != "system"]
         if len(non_system) > self.HISTORY_WINDOW:
             non_system = non_system[-self.HISTORY_WINDOW:]
         return system_msgs + non_system
@@ -171,7 +174,7 @@ class Agent:
     # Main turn loop                                                       #
     # ------------------------------------------------------------------ #
 
-    def take_turn(self, instruction: str = None) -> str:
+    def take_turn(self, instruction: str | None = None) -> str:
         # Inject team context + instruction
         team_messages_context = ""
         if self.team_channel:

@@ -133,12 +133,12 @@ class ModelConfig:
         return cls(model=model, provider=provider, **kwargs)
 
     @classmethod
-    def from_url(cls, base_url: str, model: str, api_key: str = None, **kwargs) -> "ModelConfig":
+    def from_url(cls, base_url: str, model: str, api_key: str | None = None, **kwargs) -> "ModelConfig":
         """Create a config for any arbitrary OpenAI-compatible endpoint."""
         return cls(model=model, base_url=base_url, api_key=api_key, **kwargs)
 
     @classmethod
-    def from_env(cls, model: str = None) -> "ModelConfig":
+    def from_env(cls, model: str | None = None) -> "ModelConfig":
         """
         Build a config entirely from environment variables.
         Reads: LLM_MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_TEMPERATURE, LLM_MAX_TOKENS.

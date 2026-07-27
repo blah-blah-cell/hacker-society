@@ -24,3 +24,7 @@
 ## Phase 5: Scalability (Current)
 - Support large-scale matches with N attackers vs M defenders.
 - Support Kubernetes or Swarm for distributed container orchestration.
+
+## Phase 6: Replay & Analytics
+- [x] CLI match replay viewer (`src/replay.py`).
+- [ ] Web UI match replay viewer.

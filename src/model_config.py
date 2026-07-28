@@ -96,14 +96,18 @@ class ModelConfig:
         if resolved_url is None:
             resolved_url = os.getenv("LLM_BASE_URL")  # global fallback
 
-        # Resolve api_key: explicit > provider env var > LLM_API_KEY > dummy
+        # Resolve api_key: explicit > provider env var > LLM_API_KEY / OPENAI_API_KEY > dummy
         resolved_key = self.api_key
         if resolved_key is None and self.provider:
             key_env = _PROVIDER_DEFAULTS.get(self.provider, {}).get("key_env")
             if key_env:
                 resolved_key = os.getenv(key_env)
         if resolved_key is None:
-            resolved_key = os.getenv("LLM_API_KEY", "dummy-key-for-local")
+            resolved_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+            if not resolved_key and not resolved_url:
+                resolved_key = "dummy-key-for-local"
+            elif not resolved_key:
+                resolved_key = "dummy-key-for-local"
 
         if resolved_url:
             self._client = OpenAI(base_url=resolved_url, api_key=resolved_key)

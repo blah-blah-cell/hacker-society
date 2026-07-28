@@ -21,7 +21,7 @@ import uuid
 # Ensure project root is on sys.path so `python src/main.py` also works
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type: ignore
 
 from src.agent import Agent
 from src.environment import Environment
@@ -169,7 +169,7 @@ VULN_MENU = [
 ]
 
 
-def main():
+def main() -> None:
     load_dotenv()
     parser = _build_parser()
     args   = parser.parse_args()

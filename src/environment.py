@@ -35,6 +35,7 @@ class Environment:
 
     def setup(self, secret_flag: str, vuln_choice: int,
               num_attackers: int = 1, num_defenders: int = 1):
+        self.secret_flag = secret_flag
         if self.orchestration_mode == "kubernetes":
             print("Kubernetes orchestration not yet implemented.")
             return {}
@@ -134,7 +135,7 @@ class Environment:
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
             cmd = command.strip().lower()
             if "cat /tmp/flag.txt" in cmd:
-                return "0123456789abcdef0123456789abcdef"
+                return getattr(self, "secret_flag", "0123456789abcdef0123456789abcdef")
             elif "nmap" in cmd:
                 return "PORT 21/tcp OPEN ftp\nPORT 22/tcp OPEN ssh\nPORT 3306/tcp OPEN mysql"
             elif "netstat" in cmd or "ss " in cmd:

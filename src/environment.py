@@ -6,7 +6,16 @@ import os
 
 class Environment:
     def __init__(self, prefix="hacker_society"):
-        self.client = docker.from_env()
+        if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
+            self.client = None
+        else:
+            try:
+                self.client = docker.from_env()
+            except Exception as e:
+                if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
+                    self.client = None
+                else:
+                    raise e
         self.prefix = prefix
 
         self.public_network_name = f"{self.prefix}_public_{uuid.uuid4().hex[:8]}"

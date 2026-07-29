@@ -116,7 +116,7 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Message-history pruning                                             #
     # ------------------------------------------------------------------ #
-    HISTORY_WINDOW = 30
+    HISTORY_WINDOW = 10
 
     def _pruned_messages(self) -> list:
         def _get_role(m):
@@ -149,6 +149,8 @@ class Agent:
             command = args.get("command", "")
             print(f"[{self.agent_id.upper()} EXEC]: {command}")
             output = self.environment.execute_in_container(self.agent_id, self.role, command)
+            if len(output) > 1000:
+                output = output[:1000] + "\n...[truncated long output]"
             print(f"[{self.agent_id.upper()} OUT]:\n{output[:500]}{'...' if len(output) > 500 else ''}")
 
         elif fn_name == "search_memory":

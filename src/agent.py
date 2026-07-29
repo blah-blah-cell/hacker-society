@@ -125,13 +125,16 @@ class Agent:
             return getattr(m, "role", None)
 
         system_msgs = [m for m in self.messages if _get_role(m) == "system"]
-        non_system  = [m for m in self.messages if _get_role(m) != "system"]
-        if len(non_system) > self.HISTORY_WINDOW:
-            non_system = non_system[-self.HISTORY_WINDOW:]
+        user_initial = [m for m in self.messages if _get_role(m) == "user"][:1]  # Pin first objective prompt
+        other_msgs  = [m for m in self.messages if m not in system_msgs and m not in user_initial]
+
+        if len(other_msgs) > self.HISTORY_WINDOW:
+            other_msgs = other_msgs[-self.HISTORY_WINDOW:]
             # Prevent starting the message slice on an orphaned tool message
-            while non_system and _get_role(non_system[0]) == "tool":
-                non_system.pop(0)
-        return system_msgs + non_system
+            while other_msgs and _get_role(other_msgs[0]) == "tool":
+                other_msgs.pop(0)
+
+        return system_msgs + user_initial + other_msgs
 
 
     # ------------------------------------------------------------------ #

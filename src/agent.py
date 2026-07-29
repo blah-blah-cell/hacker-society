@@ -213,6 +213,28 @@ class Agent:
             llm_message = response.choices[0].message
             self.messages.append(llm_message)
 
+            # Fallback: if native tool_calls is empty but content contains <tool_call> XML tags, parse them manually
+            if not llm_message.tool_calls and llm_message.content and "<tool_call>" in llm_message.content:
+                import re
+                matches = re.findall(r'<tool_call>\s*(.*?)\s*</tool_call>', llm_message.content, re.DOTALL)
+                for m in matches:
+                    try:
+                        data = json.loads(m)
+                        fn_name = data.get("name")
+                        args = data.get("arguments", {})
+                        if fn_name == "execute_bash_command":
+                            cmd = args.get("command", "")
+                            print(f"[{self.agent_id.upper()} EXEC (PARSED)]: {cmd}")
+                            out = self.environment.execute_in_container(self.agent_id, self.role, cmd)
+                            self.add_message("user", f"Tool Output for '{cmd}':\n{out}")
+                        elif fn_name == "send_message_to_team":
+                            msg = args.get("message", "")
+                            print(f"[{self.agent_id.upper()} TEAM MSG (PARSED)]: {msg}")
+                            self.team_channel.append({"sender_id": self.agent_id, "message": msg})
+                            self.add_message("user", "Message broadcasted to team.")
+                    except Exception as e:
+                        pass
+
             if not llm_message.tool_calls:
                 return llm_message.content if llm_message.content is not None else ""
 

@@ -133,20 +133,29 @@ class Environment:
     def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
         """Executes a bash command in the specified container and returns output."""
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
-            cmd = command.strip().lower()
-            if "flag.txt" in cmd:
+            import re
+            cmd = command.strip()
+            
+            # Check for actual flag reading/exfiltration commands (cat /tmp/flag.txt, LOAD_FILE('/tmp/flag.txt'))
+            if re.search(r'\bcat\s+.*flag\.txt\b', cmd, re.I) or "load_file" in cmd.lower():
                 return getattr(self, "secret_flag", "0123456789abcdef0123456789abcdef")
-            elif "nmap" in cmd:
-                return "PORT 21/tcp OPEN ftp\nPORT 22/tcp OPEN ssh\nPORT 3306/tcp OPEN mysql"
-            elif "netstat" in cmd or "ss " in cmd:
-                return "tcp 0 0 0.0.0.0:21 LISTEN\ntcp 0 0 0.0.0.0:22 LISTEN"
-            elif "ps aux" in cmd or "top" in cmd:
-                return "root 1 0.0 /usr/sbin/vsftpd\nroot 45 0.0 /usr/sbin/sshd"
-            elif "id" in cmd:
+            elif re.search(r'\bnmap\b', cmd, re.I):
+                return "Starting Nmap 7.94... Nmap scan report for 10.0.0.2\nPORT 21/tcp OPEN ftp\nPORT 22/tcp OPEN ssh\nPORT 3306/tcp OPEN mysql"
+            elif re.search(r'\b(netstat|ss)\b', cmd, re.I):
+                return "tcp 0 0 0.0.0.0:21 LISTEN\ntcp 0 0 0.0.0.0:22 LISTEN\ntcp 0 0 0.0.0.0:3306 LISTEN"
+            elif re.search(r'\b(ps|top)\b', cmd, re.I):
+                return "PID TTY TIME CMD\n 1 ? 00:00:00 vsftpd\n 45 ? 00:00:00 sshd\n 89 ? 00:00:00 mysqld"
+            elif re.search(r'\bid\b', cmd, re.I):
                 return "uid=0(root) gid=0(root) groups=0(root)"
-            elif "ls" in cmd:
+            elif re.search(r'\bls\b', cmd, re.I) and "docker" not in cmd.lower():
                 return "total 12\n-rw-r--r-- 1 root root 32 /tmp/flag.txt"
-            return f"MOCK OUTPUT: '{command}' executed successfully."
+            elif re.search(r'\bdocker\s+ps\b', cmd, re.I):
+                return "CONTAINER ID IMAGE PORTS STATUS NAMES\n8a5ab18d vsftpd 0.0.0.0:21->21/tcp Up 5 minutes hacker_society_public"
+            elif re.search(r'\b(ufw|iptables)\b', cmd, re.I):
+                return "Firewall rules updated successfully."
+            elif re.search(r'\b(fail2ban-client|systemctl)\b', cmd, re.I):
+                return "Service active and running."
+            return f"Command '{command}' executed successfully."
 
         container = (
             self.attacker_containers.get(agent_id)

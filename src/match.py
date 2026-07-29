@@ -6,6 +6,7 @@ import hashlib
 from datetime import datetime
 import concurrent.futures
 import threading
+from typing import Any
 
 
 class Match:
@@ -29,7 +30,7 @@ class Match:
         # FIX: store a HASH of the flag in logs, never the plaintext
         flag_hash = hashlib.sha256(secret_flag.encode()).hexdigest()
 
-        self.logs = {
+        self.logs: dict[str, Any] = {
             "match_id": self.match_id,
             "timestamp": datetime.now().isoformat(),
             "secret_flag_sha256": flag_hash,   # was: "secret_flag": secret_flag
@@ -74,7 +75,7 @@ class Match:
 
         return reward
 
-    def run(self, defender_ips: list):
+    def run(self, defender_ips: list) -> str:
         print(f"\n--- MATCH {self.match_id} STARTING ---")
         print(f"Max turns: {self.max_turns}")
         print(f"Defender IPs: {defender_ips}\n")

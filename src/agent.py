@@ -11,6 +11,7 @@ LLM agent with:
 from __future__ import annotations
 
 import json
+from typing import Optional
 
 from src.model_config import ModelConfig
 
@@ -185,7 +186,7 @@ class Agent:
     # Main turn loop                                                       #
     # ------------------------------------------------------------------ #
 
-    def take_turn(self, instruction: str = None) -> str:
+    def take_turn(self, instruction: Optional[str] = None) -> str:
         # Inject team context + instruction
         team_messages_context = ""
         if self.team_channel:
@@ -245,7 +246,7 @@ class Agent:
         # Exceeded MAX_TOOL_ROUNDS — force plain text response
         print(f"[{self.agent_id.upper()}] WARNING: hit MAX_TOOL_ROUNDS={MAX_TOOL_ROUNDS}, forcing final response.")
         final = self.client.chat.completions.create(
-            messages=self._pruned_messages(),
+            messages=self._pruned_messages(), # type: ignore
             **{k: v for k, v in self.cfg.api_kwargs().items() if k != "tools"},
         )
         final_msg = final.choices[0].message

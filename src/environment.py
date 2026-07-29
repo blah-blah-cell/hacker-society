@@ -131,7 +131,16 @@ class Environment:
         }
 
     def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
-        """Executes a bash command in the specified container and returns output."""
+        """Executes a bash command in the specified environment and returns actual output."""
+        if os.environ.get("REAL_LOCAL_SHELL"):
+            import subprocess
+            try:
+                res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15)
+                output = res.stdout + res.stderr
+                return output if output.strip() else f"Command '{command}' executed successfully with no output."
+            except Exception as e:
+                return f"Execution error: {str(e)}"
+
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
             import re
             cmd = command.strip()

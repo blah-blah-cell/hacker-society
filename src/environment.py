@@ -134,7 +134,7 @@ class Environment:
         """Executes a bash command in the specified container and returns output."""
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
             cmd = command.strip().lower()
-            if "cat /tmp/flag.txt" in cmd:
+            if "flag.txt" in cmd:
                 return getattr(self, "secret_flag", "0123456789abcdef0123456789abcdef")
             elif "nmap" in cmd:
                 return "PORT 21/tcp OPEN ftp\nPORT 22/tcp OPEN ssh\nPORT 3306/tcp OPEN mysql"

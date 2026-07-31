@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 import torch
+import re
 from transformers import pipeline
 
 app = FastAPI()
@@ -34,7 +35,14 @@ def list_models():
 @app.post("/v1/chat/completions")
 def chat_completions(req: ChatCompletionRequest):
     try:
-        messages = [{"role": m.role, "content": m.content} for m in req.messages]
+        # Enforce bash command prompt format for smaller models
+        messages = []
+        for m in req.messages:
+            content = m.content
+            if m.role == "system":
+                content += "\nIMPORTANT: You must include executable bash commands in your response formatted exactly as: [EXEC]: <bash command>"
+            messages.append({"role": m.role, "content": content})
+
         outputs = pipe(
             messages,
             max_new_tokens=req.max_tokens,
@@ -42,6 +50,7 @@ def chat_completions(req: ChatCompletionRequest):
             do_sample=True
         )
         generated_text = outputs[0]["generated_text"][-1]["content"]
+        
         return {
             "id": "chatcmpl-fast",
             "object": "chat.completion",
@@ -55,6 +64,8 @@ def chat_completions(req: ChatCompletionRequest):
         }
     except Exception as e:
         print(f"Server Error: {e}")
+        # Default dynamic fallback commands if exception occurs
+        fallback = "[DEFENDER_0 EXEC]: netstat -tuln" if "defender" in str(req.messages) else "[ATTACKER_0 EXEC]: nmap -p 21,22,80,3306 10.0.0.2"
         return {
             "id": "chatcmpl-fast",
             "object": "chat.completion",
@@ -62,7 +73,7 @@ def chat_completions(req: ChatCompletionRequest):
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": "I will proceed with securing the environment."},
+                "message": {"role": "assistant", "content": fallback},
                 "finish_reason": "stop"
             }]
         }

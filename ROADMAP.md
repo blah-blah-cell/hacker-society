@@ -24,3 +24,6 @@
 ## Phase 5: Scalability (Current)
 - Support large-scale matches with N attackers vs M defenders.
 - Support Kubernetes or Swarm for distributed container orchestration.
+
+## Phase 6: Tools & Tooling (Current)
+- [x] CLI match replay viewer.

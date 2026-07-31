@@ -104,12 +104,20 @@ class Environment:
             )
             self.attacker_containers[f"attacker_{i}"] = attacker_container
 
-        # Write flag safely using base64 encoding (prevents shell injection)
-        import base64
-        flag_b64 = base64.b64encode(secret_flag.encode("utf-8")).decode("ascii")
+        # Write flag safely using in-memory tar stream via put_archive (prevents shell injection)
+        import tarfile
+        import io
         flag_path = "/tmp/flag.txt"
         print(f"Injecting flag into DB container at {flag_path}...")
-        self.db_container.exec_run(["bash", "-c", f"echo -n '{flag_b64}' | base64 -d > {flag_path}"])
+
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode='w') as tar:
+            tarinfo = tarfile.TarInfo(name=os.path.basename(flag_path))
+            tarinfo.size = len(secret_flag.encode('utf-8'))
+            tar.addfile(tarinfo, io.BytesIO(secret_flag.encode('utf-8')))
+
+        tar_stream.seek(0)
+        self.db_container.put_archive(os.path.dirname(flag_path), tar_stream)
 
         time.sleep(2)
 

@@ -25,3 +25,4 @@ This project is an autonomous dual-model cyber range. It orchestrates matches be
 2. Rely on standard Python libraries when possible to keep dependencies light.
 3. Make sure error handling is robust, especially for Docker daemon connections and LLM API timeouts.
 4. Keep the RL/Fine-tuning goal in mind: ensure comprehensive logging of the state, agent prompt, tool usage, and output.
+5. Use `src/replay.py` to view turn-by-turn action replays from stored JSON log files.

@@ -357,7 +357,7 @@ hacker-society/
 | 4 | 🔧 Scaffolded | Docker Swarm / Kubernetes distributed orchestration |
 | 5 | 🔧 Scaffolded | Real Unsloth/HF DPO fine-tuning loop |
 | 6 | 📋 Planned | Per-team model routing (attacker vs defender on separate GPUs) |
-| 7 | 📋 Planned | Web UI match replay viewer |
+| 7 | ✅ Done | CLI match replay viewer (`src/replay.py`) |
 
 ---
 

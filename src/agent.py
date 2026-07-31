@@ -185,7 +185,7 @@ class Agent:
     # Main turn loop                                                       #
     # ------------------------------------------------------------------ #
 
-    def take_turn(self, instruction: str = None) -> str:
+    def take_turn(self, instruction: str | None = None) -> str:
         # Inject team context + instruction
         team_messages_context = ""
         if self.team_channel:

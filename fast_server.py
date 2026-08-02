@@ -1,7 +1,7 @@
 """
 fast_server.py — Autonomous Cyber Range LLM Server
 
-Serves Google Gemma 2 9B via FastAPI with full OpenAI-compatible
+Serves Qwen/Qwen2.5-7B-Instruct via FastAPI with full OpenAI-compatible
 tool-calling support. The model autonomously decides which bash
 commands to run based on raw terminal feedback from previous turns.
 """
@@ -17,14 +17,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-MODEL_NAME = "google/gemma-2-9b-it"
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 
 print(f"Loading {MODEL_NAME} onto GPU...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     device_map="auto",
-    torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     trust_remote_code=True
 )
 print(f"{MODEL_NAME} loaded successfully!")
@@ -45,20 +45,18 @@ class ChatCompletionRequest(BaseModel):
     tool_choice: str | None = None
 
 
-def build_tool_aware_prompt(messages: list[ChatMessage], tools: list | None) -> str:
+def build_tool_aware_prompt(messages: list[ChatMessage], tools: list | None) -> list[dict]:
     """
     Build a prompt that instructs the model about available tools
     and how to format tool calls in its response.
     """
     tool_description = ""
     if tools:
-        tool_names = []
         for t in tools:
             fn = t.get("function", {})
             name = fn.get("name", "")
             desc = fn.get("description", "")
             params = json.dumps(fn.get("parameters", {}))
-            tool_names.append(name)
             tool_description += f"\n- {name}: {desc}\n  Parameters: {params}\n"
 
     system_inject = (
@@ -79,25 +77,22 @@ def build_tool_aware_prompt(messages: list[ChatMessage], tools: list | None) -> 
         role = m.role
         content = m.content or ""
 
-        # Gemma doesn't support system/tool roles — map them
         if role == "system":
-            role = "user"
+            role = "system"
             content = system_inject + "\n" + content
         elif role == "tool":
             role = "user"
             content = f"Terminal Output:\n```\n{content}\n```\nNow choose your next action. Respond with ONLY a JSON tool call."
-        elif role not in ("user", "assistant", "model"):
+        elif role not in ("user", "assistant", "system"):
             role = "user"
 
-        # Collapse consecutive same-role messages
         if clean_messages and clean_messages[-1]["role"] == role:
             clean_messages[-1]["content"] += "\n" + content
         else:
             clean_messages.append({"role": role, "content": content})
 
-    # Ensure conversation starts with user and alternates
-    if not clean_messages or clean_messages[0]["role"] != "user":
-        clean_messages.insert(0, {"role": "user", "content": system_inject})
+    if not clean_messages or clean_messages[0]["role"] != "system":
+        clean_messages.insert(0, {"role": "system", "content": system_inject})
 
     return clean_messages
 
@@ -106,7 +101,6 @@ def parse_tool_call(text: str):
     """
     Try to extract a tool call JSON from the model's raw text output.
     """
-    # Try to find JSON with tool_call key
     patterns = [
         r'\{\s*"tool_call"\s*:\s*\{.*?\}\s*\}',
         r'\{\s*"name"\s*:\s*"execute_bash_command".*?\}',
@@ -123,7 +117,6 @@ def parse_tool_call(text: str):
             except json.JSONDecodeError:
                 continue
 
-    # Try to extract a bash command from common patterns
     cmd_patterns = [
         r'```bash\s*\n(.*?)\n```',
         r'```\s*\n(.*?)\n```',
@@ -168,7 +161,6 @@ def chat_completions(req: ChatCompletionRequest):
         generated_ids = outputs[0][inputs.input_ids.shape[1]:]
         response_text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
 
-        # Try to parse a tool call from the response
         tool_call = parse_tool_call(response_text)
 
         if tool_call and req.tools:
@@ -209,7 +201,7 @@ def chat_completions(req: ChatCompletionRequest):
             }
 
     except Exception as e:
-        print(f"Gemma Server Error: {e}")
+        print(f"Qwen Server Error: {e}")
         traceback.print_exc()
         return {
             "id": f"chatcmpl-err",

@@ -11,6 +11,7 @@ LLM agent with:
 from __future__ import annotations
 
 import json
+from typing import Optional
 
 from src.model_config import ModelConfig
 
@@ -185,7 +186,7 @@ class Agent:
     # Main turn loop                                                       #
     # ------------------------------------------------------------------ #
 
-    def take_turn(self, instruction: str = None) -> str:
+    def take_turn(self, instruction: Optional[str] = None) -> str:
         # Inject team context + instruction
         team_messages_context = ""
         if self.team_channel:

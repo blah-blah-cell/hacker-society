@@ -21,7 +21,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
-from openai import OpenAI
+from openai import OpenAI  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -137,18 +137,20 @@ class ModelConfig:
         return cls(model=model, provider=provider, **kwargs)
 
     @classmethod
-    def from_url(cls, base_url: str, model: str, api_key: str = None, **kwargs) -> "ModelConfig":
+    def from_url(cls, base_url: str, model: str, api_key: Optional[str] = None, **kwargs) -> "ModelConfig":
         """Create a config for any arbitrary OpenAI-compatible endpoint."""
         return cls(model=model, base_url=base_url, api_key=api_key, **kwargs)
 
     @classmethod
-    def from_env(cls, model: str = None) -> "ModelConfig":
+    def from_env(cls, model: Optional[str] = None) -> "ModelConfig":
         """
         Build a config entirely from environment variables.
         Reads: LLM_MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_TEMPERATURE, LLM_MAX_TOKENS.
         """
+        env_model = os.getenv("LLM_MODEL")
+        resolved_model = model or (env_model if env_model is not None else "gpt-4o-mini")
         return cls(
-            model=model or os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            model=resolved_model,
             base_url=os.getenv("LLM_BASE_URL"),
             api_key=os.getenv("LLM_API_KEY"),
             temperature=float(t) if (t := os.getenv("LLM_TEMPERATURE")) else None,
@@ -177,7 +179,7 @@ class ModelConfig:
             cfg = ModelConfig.from_yaml("configs.yaml", "attacker")
         """
         try:
-            import yaml
+            import yaml  # type: ignore
         except ImportError as exc:
             raise ImportError(
                 "PyYAML is required for YAML config loading: pip install pyyaml"

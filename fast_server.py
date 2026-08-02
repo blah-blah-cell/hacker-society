@@ -1,9 +1,8 @@
 """
 fast_server.py — Autonomous Cyber Range LLM Server
 
-Serves Qwen/Qwen2.5-7B-Instruct via FastAPI with full OpenAI-compatible
-tool-calling support. The model autonomously decides which bash
-commands to run based on raw terminal feedback from previous turns.
+Serves Qwen/Qwen2.5-7B-Instruct-AWQ via FastAPI with full OpenAI-compatible
+tool-calling support optimized for Kaggle Tesla T4 GPUs.
 """
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -17,14 +16,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+# AWQ Quantized Model - explicitly compatible with Tesla T4 (Turing sm_75)
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct-AWQ"
 
-print(f"Loading {MODEL_NAME} onto GPU...")
+print(f"Loading {MODEL_NAME} onto T4 GPU...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     device_map="auto",
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    torch_dtype=torch.float16,
     trust_remote_code=True
 )
 print(f"{MODEL_NAME} loaded successfully!")
@@ -46,10 +46,6 @@ class ChatCompletionRequest(BaseModel):
 
 
 def build_tool_aware_prompt(messages: list[ChatMessage], tools: list | None) -> list[dict]:
-    """
-    Build a prompt that instructs the model about available tools
-    and how to format tool calls in its response.
-    """
     tool_description = ""
     if tools:
         for t in tools:
@@ -98,9 +94,6 @@ def build_tool_aware_prompt(messages: list[ChatMessage], tools: list | None) -> 
 
 
 def parse_tool_call(text: str):
-    """
-    Try to extract a tool call JSON from the model's raw text output.
-    """
     patterns = [
         r'\{\s*"tool_call"\s*:\s*\{.*?\}\s*\}',
         r'\{\s*"name"\s*:\s*"execute_bash_command".*?\}',
@@ -201,7 +194,7 @@ def chat_completions(req: ChatCompletionRequest):
             }
 
     except Exception as e:
-        print(f"Qwen Server Error: {e}")
+        print(f"Qwen AWQ Server Error: {e}")
         traceback.print_exc()
         return {
             "id": f"chatcmpl-err",

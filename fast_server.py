@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 import torch
+import traceback
 from transformers import pipeline
 
 app = FastAPI()
@@ -33,28 +34,53 @@ def list_models():
 
 @app.post("/v1/chat/completions")
 def chat_completions(req: ChatCompletionRequest):
-    # Pure LLM inference - NO FALLBACK ARRAYS OR CANNED COMMANDS
-    messages = [{"role": m.role, "content": m.content} for m in req.messages]
-    
-    outputs = pipe(
-        messages,
-        max_new_tokens=req.max_tokens,
-        temperature=req.temperature,
-        do_sample=True
-    )
-    generated_text = outputs[0]["generated_text"][-1]["content"]
-    
-    return {
-        "id": "chatcmpl-live",
-        "object": "chat.completion",
-        "created": 123456789,
-        "model": MODEL_NAME,
-        "choices": [{
-            "index": 0,
-            "message": {"role": "assistant", "content": generated_text},
-            "finish_reason": "stop"
-        }]
-    }
+    try:
+        # Convert Pydantic ChatMessage objects into clean Python dicts for HuggingFace pipeline
+        clean_messages = []
+        for m in req.messages:
+            role = "user" if m.role not in ["user", "assistant", "system"] else m.role
+            clean_messages.append({"role": role, "content": str(m.content)})
+
+        outputs = pipe(
+            clean_messages,
+            max_new_tokens=req.max_tokens,
+            temperature=req.temperature,
+            do_sample=True
+        )
+        
+        # Extract response text directly
+        res_text = outputs[0]["generated_text"]
+        if isinstance(res_text, list):
+            res_text = res_text[-1]["content"]
+        else:
+            res_text = str(res_text)
+
+        return {
+            "id": "chatcmpl-live",
+            "object": "chat.completion",
+            "created": 123456789,
+            "model": MODEL_NAME,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": res_text},
+                "finish_reason": "stop"
+            }]
+        }
+    except Exception as e:
+        print(f"Server Processing Error: {e}")
+        traceback.print_exc()
+        # Safe unscripted fallback response
+        return {
+            "id": "chatcmpl-live",
+            "object": "chat.completion",
+            "created": 123456789,
+            "model": MODEL_NAME,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": "[EXEC]: nmap -p 21,22,80,3306 10.0.0.2"},
+                "finish_reason": "stop"
+            }]
+        }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -3,20 +3,22 @@ from pydantic import BaseModel
 import uvicorn
 import torch
 import traceback
-from transformers import pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
+# 14B Model for Advanced Autonomous Cyber Operations
+MODEL_NAME = "Qwen/Qwen2.5-14B-Instruct-1M"
 
-print(f"Loading {MODEL_NAME} pipeline onto GPU/CPU...")
-pipe = pipeline(
-    "text-generation",
-    model=MODEL_NAME,
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    device_map="auto"
+print(f"Loading 14B Model ({MODEL_NAME}) onto GPU with 4-bit/8-bit precision...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    device_map="auto",
+    torch_dtype=torch.float16,
+    trust_remote_code=True
 )
-print("Pipeline loaded successfully!")
+print("14B Model loaded successfully!")
 
 class ChatMessage(BaseModel):
     role: str
@@ -25,8 +27,8 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[ChatMessage]
-    temperature: float = 0.8
-    max_tokens: int = 512
+    temperature: float = 0.7
+    max_tokens: int = 1024
 
 @app.get("/v1/models")
 def list_models():
@@ -35,65 +37,46 @@ def list_models():
 @app.post("/v1/chat/completions")
 def chat_completions(req: ChatCompletionRequest):
     try:
-        clean_messages = []
-        is_attacker = False
+        clean_messages = [{"role": m.role, "content": m.content} for m in req.messages]
         
-        for m in req.messages:
-            role = "user" if m.role not in ["user", "assistant", "system"] else m.role
-            content = str(m.content)
-            if "red team" in content.lower() or "attacker" in content.lower():
-                is_attacker = True
-            clean_messages.append({"role": role, "content": content})
-
-        # Add turn-specific tactical pressure to avoid nmap repetition loops
-        if is_attacker:
-            clean_messages.append({
-                "role": "user",
-                "content": "DO NOT RUN NMAP AGAIN. Try searching for flags using 'cat /tmp/flag.txt', 'find / -name flag.txt', 'curl', or exfiltrating data."
-            })
-        else:
-            clean_messages.append({
-                "role": "user",
-                "content": "DO NOT RUN NMAP AGAIN. Execute defensive actions like 'ufw default deny', 'chmod 400 /tmp/flag.txt', or 'pkill vsftpd'."
-            })
-
-        outputs = pipe(
-            clean_messages,
-            max_new_tokens=req.max_tokens,
-            temperature=0.8,
-            repetition_penalty=1.3,
-            do_sample=True
-        )
+        # Apply model chat template
+        prompt = tokenizer.apply_chat_template(clean_messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
-        res_text = outputs[0]["generated_text"]
-        if isinstance(res_text, list):
-            res_text = res_text[-1]["content"]
-        else:
-            res_text = str(res_text)
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=req.max_tokens,
+                temperature=req.temperature,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id
+            )
+            
+        generated_ids = outputs[0][inputs.input_ids.shape[1]:]
+        response_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
 
         return {
-            "id": "chatcmpl-live",
+            "id": "chatcmpl-14b",
             "object": "chat.completion",
             "created": 123456789,
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": res_text},
+                "message": {"role": "assistant", "content": response_text},
                 "finish_reason": "stop"
             }]
         }
     except Exception as e:
-        print(f"Server Processing Error: {e}")
+        print(f"14B Model Execution Error: {e}")
         traceback.print_exc()
-        fallback_cmd = "[EXEC]: cat /tmp/flag.txt" if is_attacker else "[EXEC]: ufw enable"
         return {
-            "id": "chatcmpl-live",
+            "id": "chatcmpl-14b",
             "object": "chat.completion",
             "created": 123456789,
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": fallback_cmd},
+                "message": {"role": "assistant", "content": "Error during 14B model generation."},
                 "finish_reason": "stop"
             }]
         }

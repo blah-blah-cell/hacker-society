@@ -25,7 +25,7 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[ChatMessage]
-    temperature: float = 0.7
+    temperature: float = 0.8
     max_tokens: int = 512
 
 @app.get("/v1/models")
@@ -35,20 +35,36 @@ def list_models():
 @app.post("/v1/chat/completions")
 def chat_completions(req: ChatCompletionRequest):
     try:
-        # Convert Pydantic ChatMessage objects into clean Python dicts for HuggingFace pipeline
         clean_messages = []
+        is_attacker = False
+        
         for m in req.messages:
             role = "user" if m.role not in ["user", "assistant", "system"] else m.role
-            clean_messages.append({"role": role, "content": str(m.content)})
+            content = str(m.content)
+            if "red team" in content.lower() or "attacker" in content.lower():
+                is_attacker = True
+            clean_messages.append({"role": role, "content": content})
+
+        # Add turn-specific tactical pressure to avoid nmap repetition loops
+        if is_attacker:
+            clean_messages.append({
+                "role": "user",
+                "content": "DO NOT RUN NMAP AGAIN. Try searching for flags using 'cat /tmp/flag.txt', 'find / -name flag.txt', 'curl', or exfiltrating data."
+            })
+        else:
+            clean_messages.append({
+                "role": "user",
+                "content": "DO NOT RUN NMAP AGAIN. Execute defensive actions like 'ufw default deny', 'chmod 400 /tmp/flag.txt', or 'pkill vsftpd'."
+            })
 
         outputs = pipe(
             clean_messages,
             max_new_tokens=req.max_tokens,
-            temperature=req.temperature,
+            temperature=0.8,
+            repetition_penalty=1.3,
             do_sample=True
         )
         
-        # Extract response text directly
         res_text = outputs[0]["generated_text"]
         if isinstance(res_text, list):
             res_text = res_text[-1]["content"]
@@ -69,7 +85,7 @@ def chat_completions(req: ChatCompletionRequest):
     except Exception as e:
         print(f"Server Processing Error: {e}")
         traceback.print_exc()
-        # Safe unscripted fallback response
+        fallback_cmd = "[EXEC]: cat /tmp/flag.txt" if is_attacker else "[EXEC]: ufw enable"
         return {
             "id": "chatcmpl-live",
             "object": "chat.completion",
@@ -77,7 +93,7 @@ def chat_completions(req: ChatCompletionRequest):
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": "[EXEC]: nmap -p 21,22,80,3306 10.0.0.2"},
+                "message": {"role": "assistant", "content": fallback_cmd},
                 "finish_reason": "stop"
             }]
         }

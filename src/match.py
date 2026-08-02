@@ -98,9 +98,14 @@ class Match:
 
         shaped_rewards = {"attacker": 0.0, "defender": 0.0}
 
-        for turn in range(self.max_turns):
-            self.current_turn = turn + 1
-            print(f"\n=== TURN {self.current_turn} ===")
+        for turn in range(1, self.max_turns + 1):
+            self.current_turn = turn
+            # Dynamic Per-Turn Random Flag Generation
+            turn_random_suffix = uuid.uuid4().hex[:12]
+            self.secret_flag = f"flag_{turn_random_suffix}"
+            self.environment.set_secret_flag(self.secret_flag)
+            flag_hash = hashlib.sha256(self.secret_flag.encode()).hexdigest()
+            print(f"\n=== TURN {turn} (Dynamic Flag: {self.secret_flag[:8]}...) ===")
 
             turn_log = {"turn_number": self.current_turn, "events": []}
             self._attacker_won.clear()

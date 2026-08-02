@@ -7,18 +7,18 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-# 14B Model for Advanced Autonomous Cyber Operations
-MODEL_NAME = "Qwen/Qwen2.5-14B-Instruct-1M"
+# Switch to Google Gemma 2 9B / 27B model family
+MODEL_NAME = "google/gemma-2-9b-it"
 
-print(f"Loading 14B Model ({MODEL_NAME}) onto GPU with 4-bit/8-bit precision...")
+print(f"Loading Gemma model ({MODEL_NAME}) onto GPU...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     device_map="auto",
-    torch_dtype=torch.float16,
+    torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
     trust_remote_code=True
 )
-print("14B Model loaded successfully!")
+print("Gemma Model loaded successfully!")
 
 class ChatMessage(BaseModel):
     role: str
@@ -37,9 +37,12 @@ def list_models():
 @app.post("/v1/chat/completions")
 def chat_completions(req: ChatCompletionRequest):
     try:
-        clean_messages = [{"role": m.role, "content": m.content} for m in req.messages]
+        clean_messages = []
+        for m in req.messages:
+            # Map system role to user role if required by Gemma template
+            role = "user" if m.role == "system" else m.role
+            clean_messages.append({"role": role, "content": m.content})
         
-        # Apply model chat template
         prompt = tokenizer.apply_chat_template(clean_messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
@@ -56,7 +59,7 @@ def chat_completions(req: ChatCompletionRequest):
         response_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
 
         return {
-            "id": "chatcmpl-14b",
+            "id": "chatcmpl-gemma",
             "object": "chat.completion",
             "created": 123456789,
             "model": MODEL_NAME,
@@ -67,16 +70,16 @@ def chat_completions(req: ChatCompletionRequest):
             }]
         }
     except Exception as e:
-        print(f"14B Model Execution Error: {e}")
+        print(f"Gemma Execution Error: {e}")
         traceback.print_exc()
         return {
-            "id": "chatcmpl-14b",
+            "id": "chatcmpl-gemma",
             "object": "chat.completion",
             "created": 123456789,
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": "Error during 14B model generation."},
+                "message": {"role": "assistant", "content": "Error during Gemma model generation."},
                 "finish_reason": "stop"
             }]
         }

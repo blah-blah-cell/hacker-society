@@ -1,8 +1,8 @@
 """
 fast_server.py — Autonomous Cyber Range LLM Server
 
-Serves Qwen/Qwen2.5-7B-Instruct with 8-bit quantization (bitsandbytes)
-compatible across all GPU architectures (Tesla P100 sm_60, T4 sm_75, A100 sm_80).
+Serves Qwen/Qwen2.5-3B-Instruct via FastAPI with standard PyTorch float16.
+Ultra-fast, 100% reliable, zero custom CUDA extension dependencies.
 """
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -12,25 +12,21 @@ import traceback
 import json
 import re
 import uuid
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
 
-print(f"Loading {MODEL_NAME} with 8-bit quantization for universal GPU compatibility...")
+print(f"Loading {MODEL_NAME} with standard PyTorch float16...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-
-# 8-bit quantization works on all GPUs including P100 (sm_60) & T4 (sm_75)
-quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    quantization_config=quantization_config,
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     device_map="auto",
     trust_remote_code=True
 )
-print(f"{MODEL_NAME} 8-bit loaded successfully!")
+print(f"{MODEL_NAME} loaded successfully!")
 
 
 class ChatMessage(BaseModel):
@@ -197,7 +193,7 @@ def chat_completions(req: ChatCompletionRequest):
             }
 
     except Exception as e:
-        print(f"Qwen 8-Bit Server Error: {e}")
+        print(f"Qwen 3B Server Error: {e}")
         traceback.print_exc()
         return {
             "id": f"chatcmpl-err",

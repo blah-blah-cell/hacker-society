@@ -28,8 +28,8 @@ class Match:
 
         # FIX: store a HASH of the flag in logs, never the plaintext
         flag_hash = hashlib.sha256(secret_flag.encode()).hexdigest()
-
-        self.logs = {
+        from typing import Any, Dict
+        self.logs: Dict[str, Any] = {
             "match_id": self.match_id,
             "timestamp": datetime.now().isoformat(),
             "secret_flag_sha256": flag_hash,   # was: "secret_flag": secret_flag
@@ -127,8 +127,8 @@ class Match:
             print(f"\n=== TURN {turn} (Dynamic Flag: {self.secret_flag}) ===")
 
             # Build per-turn context with history of previous actions and their outputs
-            attacker_history = [e['action'] for t in self.logs["turns"] for e in t['events'] if e['role'] == 'attacker']
-            defender_history = [e['action'] for t in self.logs["turns"] for e in t['events'] if e['role'] == 'defender']
+            attacker_history = [e['action'] for t in self.logs["turns"] for e in t.get('events', []) if e.get('role') == 'attacker']
+            defender_history = [e['action'] for t in self.logs["turns"] for e in t.get('events', []) if e.get('role') == 'defender']
 
             attacker_context = (
                 f"{attacker_instruction}"

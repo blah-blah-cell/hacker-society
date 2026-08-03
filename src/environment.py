@@ -104,12 +104,22 @@ class Environment:
             )
             self.attacker_containers[f"attacker_{i}"] = attacker_container
 
-        # Write flag safely using base64 encoding (prevents shell injection)
-        import base64
-        flag_b64 = base64.b64encode(secret_flag.encode("utf-8")).decode("ascii")
-        flag_path = "/tmp/flag.txt"
-        print(f"Injecting flag into DB container at {flag_path}...")
-        self.db_container.exec_run(["bash", "-c", f"echo -n '{flag_b64}' | base64 -d > {flag_path}"])
+        # Inject flag using put_archive to prevent shell injection
+        import tarfile
+        import io
+        import time
+
+        flag_content = secret_flag.encode('utf-8')
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode='w') as tar:
+            tarinfo = tarfile.TarInfo(name='flag.txt')
+            tarinfo.size = len(flag_content)
+            tarinfo.mtime = int(time.time())
+            tar.addfile(tarinfo, io.BytesIO(flag_content))
+
+        tar_stream.seek(0)
+        print("Injecting flag into DB container at /tmp/flag.txt...")
+        self.db_container.put_archive("/tmp", tar_stream)
 
         time.sleep(2)
 
@@ -132,15 +142,6 @@ class Environment:
 
     def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
         """Executes a bash command in the specified environment and returns actual output."""
-        if os.environ.get("REAL_LOCAL_SHELL"):
-            import subprocess
-            try:
-                res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15)
-                output = res.stdout + res.stderr
-                return output if output.strip() else f"Command '{command}' executed successfully with no output."
-            except Exception as e:
-                return f"Execution error: {str(e)}"
-
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
             import re
             cmd = command.strip()

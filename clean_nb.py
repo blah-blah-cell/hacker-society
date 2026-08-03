@@ -17,16 +17,16 @@ code_lines = [
     "subprocess.run(['service', 'vsftpd', 'start'], capture_output=True)\n",
     "subprocess.run('pkill -9 -f vllm ; pkill -9 -f python ; fuser -v /dev/nvidia* -k -9', shell=True, capture_output=True)\n",
     "time.sleep(4)\n",
-    "print('=== Starting Qwen 2.5 3B Server (Qwen/Qwen2.5-3B-Instruct) ===')\n",
+    "print('=== Starting Qwen 2.5 1.5B Server (Qwen/Qwen2.5-1.5B-Instruct) ===')\n",
     "server_log = open('/tmp/server.log', 'w')\n",
     "server_proc = subprocess.Popen([sys.executable, 'fast_server.py'], stdout=server_log, stderr=subprocess.STDOUT)\n",
-    "print('Waiting up to 180s for Qwen 2.5 3B server startup...')\n",
+    "print('Waiting up to 120s for server startup...')\n",
     "ready = False\n",
-    "for i in range(180):\n",
+    "for i in range(120):\n",
     "    try:\n",
     "        r = requests.get('http://localhost:8000/v1/models', timeout=2)\n",
     "        if r.status_code == 200:\n",
-    "            print(f'=== QWEN 2.5 3B SERVER IS UP AND READY (after {i*2}s) ===')\n",
+    "            print(f'=== SERVER IS UP AND READY (after {i*2}s) ===')\n",
     "            print(r.json())\n",
     "            ready = True\n",
     "            break\n",
@@ -34,7 +34,7 @@ code_lines = [
     "        pass\n",
     "    time.sleep(2)\n",
     "if not ready:\n",
-    "    print('Server failed to start within 180s. Log:')\n",
+    "    print('Server failed to start within 120s. Log:')\n",
     "    with open('/tmp/server.log') as f:\n",
     "        server_err = f.read()\n",
     "        print(server_err)\n",
@@ -42,9 +42,9 @@ code_lines = [
     "            out_f.write('SERVER_STARTUP_FAILED:\\n' + server_err)\n",
     "else:\n",
     "    subprocess.run(['nvidia-smi', '--query-gpu=name,memory.used,memory.free', '--format=csv'])\n",
-    "    print('=== Running Qwen 2.5 3B Autonomous Cyber Match ===')\n",
+    "    print('=== Running Autonomous Cyber Match ===')\n",
     "    res = subprocess.run(\n",
-    "        \"echo '1' | MOCK_DOCKER_NO_CONTAINERS=1 REAL_LOCAL_SHELL=1 python -m src.main --model Qwen/Qwen2.5-3B-Instruct --base-url http://localhost:8000/v1 --attackers 1 --defenders 1 --turns 3\",\n",
+    "        \"echo '1' | MOCK_DOCKER_NO_CONTAINERS=1 REAL_LOCAL_SHELL=1 python -m src.main --model Qwen/Qwen2.5-1.5B-Instruct --base-url http://localhost:8000/v1 --attackers 1 --defenders 1 --turns 3\",\n",
     "        shell=True, capture_output=True, text=True, cwd='/kaggle/working/hacker-society'\n",
     "    )\n",
     "    match_out = res.stdout + ('\\n=== STDERR ===\\n' + res.stderr if res.stderr else '')\n",
@@ -79,4 +79,4 @@ clean_nb = {
 with open(notebook_path, 'w', encoding='utf-8') as f:
     json.dump(clean_nb, f, indent=1)
 
-print('Updated clean_nb.py with git reset --hard origin/main.')
+print('Updated clean_nb.py for Qwen 2.5 1.5B model match.')

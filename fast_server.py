@@ -1,8 +1,9 @@
 """
 fast_server.py — Autonomous Cyber Range LLM Server
 
-Serves Qwen/Qwen2.5-3B-Instruct via FastAPI with standard PyTorch float16.
-Ultra-fast, 100% reliable, zero custom CUDA extension dependencies.
+Configured for CPU/GPU universal execution. If CUDA is incompatible
+(e.g., Kaggle Tesla P100 sm_60 vs PyTorch sm_70+), falls back smoothly
+to CPU execution without crashing.
 """
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -16,17 +17,29 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = FastAPI()
 
-MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 
-print(f"Loading {MODEL_NAME} with standard PyTorch float16...")
+print(f"Loading {MODEL_NAME} for fast universal inference...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+
+# Determine safe device: CPU is 100% compatible across all environments
+device = "cpu"
+if torch.cuda.is_available():
+    try:
+        # Check if CUDA device can actually execute a basic tensor operation
+        test_t = torch.zeros(1, device="cuda")
+        device = "cuda"
+        print("CUDA device verified working!")
+    except Exception as e:
+        print(f"CUDA verification failed ({e}), falling back to CPU.")
+
+print(f"Loading model onto target device: {device}...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    device_map="auto",
+    torch_dtype=torch.float32 if device == "cpu" else torch.float16,
     trust_remote_code=True
-)
-print(f"{MODEL_NAME} loaded successfully!")
+).to(device)
+print(f"{MODEL_NAME} loaded successfully on {device}!")
 
 
 class ChatMessage(BaseModel):
@@ -39,7 +52,7 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[ChatMessage]
     temperature: float = 0.7
-    max_tokens: int = 1024
+    max_tokens: int = 512
     tools: list | None = None
     tool_choice: str | None = None
 
@@ -138,7 +151,7 @@ def chat_completions(req: ChatCompletionRequest):
         prompt = tokenizer.apply_chat_template(
             clean_messages, tokenize=False, add_generation_prompt=True
         )
-        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=4096).to(model.device)
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048).to(device)
 
         with torch.no_grad():
             outputs = model.generate(
@@ -193,7 +206,7 @@ def chat_completions(req: ChatCompletionRequest):
             }
 
     except Exception as e:
-        print(f"Qwen 3B Server Error: {e}")
+        print(f"Qwen Fast Server Error: {e}")
         traceback.print_exc()
         return {
             "id": f"chatcmpl-err",

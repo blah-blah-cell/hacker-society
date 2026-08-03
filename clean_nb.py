@@ -8,7 +8,8 @@ code_lines = [
     "if not os.path.exists('/kaggle/working/hacker-society'):\n",
     "    subprocess.run(['git', 'clone', 'https://github.com/blah-blah-cell/hacker-society.git', '/kaggle/working/hacker-society'], check=True)\n",
     "else:\n",
-    "    subprocess.run(['git', '-C', '/kaggle/working/hacker-society', 'pull', 'origin', 'main'], check=True)\n",
+    "    subprocess.run(['git', '-C', '/kaggle/working/hacker-society', 'fetch', 'origin'], check=True)\n",
+    "    subprocess.run(['git', '-C', '/kaggle/working/hacker-society', 'reset', '--hard', 'origin/main'], check=True)\n",
     "os.chdir('/kaggle/working/hacker-society')\n",
     "subprocess.run(['pip', 'install', '-q', 'fastapi', 'uvicorn', 'transformers', 'accelerate', 'torch'], check=True)\n",
     "subprocess.run(['apt-get', 'update', '-q'], check=True)\n",
@@ -16,12 +17,12 @@ code_lines = [
     "subprocess.run(['service', 'vsftpd', 'start'], capture_output=True)\n",
     "subprocess.run('pkill -9 -f vllm ; pkill -9 -f python ; fuser -v /dev/nvidia* -k -9', shell=True, capture_output=True)\n",
     "time.sleep(4)\n",
-    "print('=== Starting Qwen 2.5 3B High-Speed Server (Qwen/Qwen2.5-3B-Instruct) ===')\n",
+    "print('=== Starting Qwen 2.5 3B Server (Qwen/Qwen2.5-3B-Instruct) ===')\n",
     "server_log = open('/tmp/server.log', 'w')\n",
     "server_proc = subprocess.Popen([sys.executable, 'fast_server.py'], stdout=server_log, stderr=subprocess.STDOUT)\n",
-    "print('Waiting up to 120s for Qwen 2.5 3B server startup...')\n",
+    "print('Waiting up to 180s for Qwen 2.5 3B server startup...')\n",
     "ready = False\n",
-    "for i in range(120):\n",
+    "for i in range(180):\n",
     "    try:\n",
     "        r = requests.get('http://localhost:8000/v1/models', timeout=2)\n",
     "        if r.status_code == 200:\n",
@@ -33,7 +34,7 @@ code_lines = [
     "        pass\n",
     "    time.sleep(2)\n",
     "if not ready:\n",
-    "    print('Server failed to start within 120s. Log:')\n",
+    "    print('Server failed to start within 180s. Log:')\n",
     "    with open('/tmp/server.log') as f:\n",
     "        server_err = f.read()\n",
     "        print(server_err)\n",
@@ -78,4 +79,4 @@ clean_nb = {
 with open(notebook_path, 'w', encoding='utf-8') as f:
     json.dump(clean_nb, f, indent=1)
 
-print('Updated clean_nb.py for Qwen 2.5 3B model match.')
+print('Updated clean_nb.py with git reset --hard origin/main.')

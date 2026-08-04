@@ -1,0 +1,112 @@
+SERVER_STARTUP_FAILED:
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.10.0+cu128).
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: 
+    Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.
+    Minimum and Maximum cuda capability supported by this version of PyTorch is
+    (7.0) - (12.0)
+    
+  queued_call()
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: 
+    Please install PyTorch with a following CUDA
+    configurations:  12.6 following instructions at
+    https://pytorch.org/get-started/locally/
+    
+  queued_call()
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: 
+Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.
+If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  queued_call()
+Loading Qwen/Qwen2.5-7B-Instruct-AWQ onto T4 GPU...
+
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]
+Fetching 2 files:  50%|█████     | 1/2 [00:22<00:22, 22.77s/it]
+Fetching 2 files: 100%|██████████| 2/2 [00:22<00:00, 11.39s/it]
+
+
+INFO  LogBar: headless/AI-agent/notebook/CI environment detected; high-frequency progress bars and animations are disabled.
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO:datasets:TensorFlow version 2.20.0 available.
+INFO:datasets:JAX version 0.7.2 available.
+
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.3.2+9eb64cd
+Transformers : 5.14.1
+Torch        : 2.10.0+cu128
+Triton       : 3.6.0
+
+INFO  ExLlamaV2 AWQ: compiling torch.ops JIT extension in `/root/.cache/gptqmodel/torch_extensions/exllamav2_awq/f7e72dc19762738c`.
+
+INFO  ExLlamaV2 AWQ: torch.ops JIT extension ready in 32s (estimated ~35s, -3.1s).
+
+INFO  Kernel: Auto-selection: adding candidate `AwqExllamaV2Linear`            
+
+INFO  Kernel: selected -> `AwqExllamaV2Linear`.                                
+
+Loading weights:   0%|          | 0/731 [00:00<?, ?it/s]
+Loading weights:   0%|          | 1/731 [00:00<02:35,  4.70it/s]
+Loading weights:   0%|          | 2/731 [00:00<03:09,  3.85it/s]
+Loading weights:   8%|▊         | 59/731 [00:00<00:04, 138.62it/s]
+Loading weights:  18%|█▊        | 133/731 [00:00<00:02, 290.23it/s]
+Loading weights:  27%|██▋       | 196/731 [00:00<00:01, 380.11it/s]
+Loading weights:  37%|███▋      | 267/731 [00:00<00:01, 460.97it/s]
+Loading weights:  47%|████▋     | 342/731 [00:01<00:00, 528.83it/s]
+Loading weights:  55%|█████▌    | 404/731 [00:01<00:00, 553.56it/s]
+Loading weights:  65%|██████▍   | 475/731 [00:01<00:00, 586.86it/s]
+Loading weights:  75%|███████▍  | 547/731 [00:01<00:00, 624.03it/s]
+Loading weights:  84%|████████▍ | 613/731 [00:01<00:00, 613.52it/s]
+Loading weights:  93%|█████████▎| 680/731 [00:01<00:00, 613.98it/s]
+Loading weights: 100%|██████████| 731/731 [00:01<00:00, 449.88it/s]
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-AWQ/resolve/main/generation_config.json "HTTP/1.1 307 Temporary Redirect"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Qwen/Qwen2.5-7B-Instruct-AWQ/b25037543e9394b818fdfca67ab2a00ecc7dd641/generation_config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/resolve-cache/models/Qwen/Qwen2.5-7B-Instruct-AWQ/b25037543e9394b818fdfca67ab2a00ecc7dd641/generation_config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-AWQ/resolve/main/custom_generate/generate.py "HTTP/1.1 404 Not Found"
+Traceback (most recent call last):
+  File "/kaggle/working/hacker-society/fast_server.py", line 24, in <module>
+    model = AutoModelForCausalLM.from_pretrained(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/auto_factory.py", line 402, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4480, in from_pretrained
+    hf_quantizer.postprocess_model(
+  File "/usr/local/lib/python3.12/dist-packages/transformers/quantizers/base.py", line 194, in postprocess_model
+    return self._process_model_after_weight_loading(model, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/quantizers/quantizer_awq.py", line 86, in _process_model_after_weight_loading
+    hf_gptqmodel_post_init(model, use_act_order=self.quantization_config.desc_act)
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/utils/model.py", line 1245, in hf_gptqmodel_post_init
+    return gptqmodel_post_init(model, use_act_order, quantize_config, max_input_length)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/utils/model.py", line 1286, in gptqmodel_post_init
+    submodule.post_init(scratch_space=model.device_tensors[device])
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/nn_modules/qlinear/exllamav2_awq.py", line 124, in post_init
+    self.qweight, self.qzeros = unpack_reorder_pack(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/quantization/awq/utils/packing_utils.py", line 92, in unpack_reorder_pack
+    iweight, izeros = unpack_awq(qweight, qzeros, bits)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/quantization/awq/utils/packing_utils.py", line 32, in unpack_awq
+    iweights = _unpack_columnwise(qweight, bits)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/gptqmodel/quantization/awq/utils/packing_utils.py", line 23, in _unpack_columnwise
+    shifts = torch.arange(0, 32, bits, device=qtensor.device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: CUDA error: no kernel image is available for execution on the device
+Search for `cudaErrorNoKernelImageForDevice' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+

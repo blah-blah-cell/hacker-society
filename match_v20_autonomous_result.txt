@@ -126,12 +126,6 @@ class Match:
             flag_hash = hashlib.sha256(self.secret_flag.encode()).hexdigest()
             print(f"\n=== TURN {turn} (Dynamic Flag: {self.secret_flag}) ===")
 
-            try:
-                from src.dashboard import broadcast_match_event
-                broadcast_match_event("turn_start", {"turn": turn, "max_turns": self.max_turns, "flag": self.secret_flag})
-            except Exception:
-                pass
-
             # Build per-turn context with history of previous actions and their outputs
             attacker_history = [e['action'] for t in self.logs["turns"] for e in t['events'] if e['role'] == 'attacker']
             defender_history = [e['action'] for t in self.logs["turns"] for e in t['events'] if e['role'] == 'defender']
@@ -162,14 +156,6 @@ class Match:
                 print(f">> {agent.agent_id} ({role}) is acting...")
                 action = agent.take_turn(prompt)
                 print(f"[{agent.agent_id.upper()}]: {action}")
-
-                try:
-                    from src.dashboard import broadcast_match_event
-                    broadcast_match_event("action", {"agent_id": agent.agent_id, "role": role, "action": action})
-                    if getattr(self.environment, "honeypot_triggered", False):
-                        broadcast_match_event("honeypot_alert", {"triggered_by": agent.agent_id})
-                except Exception:
-                    pass
 
                 r = self._compute_shaped_reward(action, role, won=False)
                 with self.lock:

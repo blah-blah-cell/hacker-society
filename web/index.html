@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hacker Society — Autonomous Cyber Range Visualizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --border-color: rgba(51, 65, 85, 0.5);
+      --red-accent: #ff3b5c;
+      --blue-accent: #38bdf8;
+      --amber-accent: #f59e0b;
+      --green-accent: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      height: 60px;
+      background: rgba(15, 23, 42, 0.9);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      backdrop-filter: blur(12px);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: 0.5px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, var(--red-accent), var(--blue-accent));
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+    }
+    .stat-pill {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-accent);
+      box-shadow: 0 0 10px var(--green-accent);
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 380px;
+      gap: 16px;
+      padding: 16px;
+      flex: 1;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Left Sidebar — Topology */
+    .topology-container {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .node-box {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .node-box:hover { border-color: var(--blue-accent); }
+    .node-box.red { border-left: 4px solid var(--red-accent); }
+    .node-box.blue { border-left: 4px solid var(--blue-accent); }
+    .node-box.amber { border-left: 4px solid var(--amber-accent); }
+
+    .node-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .node-ip { font-family: 'Fira Code', monospace; font-size: 0.75rem; color: var(--text-muted); }
+    .node-status { font-size: 0.75rem; margin-top: 8px; font-weight: 600; }
+
+    /* Main Terminal Feed */
+    .terminal-feed {
+      flex: 1;
+      background: #04070d;
+      font-family: 'Fira Code', monospace;
+      padding: 16px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .terminal-line { margin-bottom: 10px; word-break: break-all; }
+    .term-red { color: var(--red-accent); font-weight: 600; }
+    .term-blue { color: var(--blue-accent); font-weight: 600; }
+    .term-out { color: #cbd5e1; opacity: 0.9; padding-left: 12px; border-left: 2px solid var(--border-color); margin-top: 4px; }
+    .term-alert { color: var(--amber-accent); background: rgba(245, 158, 11, 0.1); padding: 6px 10px; border-radius: 6px; }
+
+    /* Right Sidebar — Team Chat & Telemetry */
+    .chat-feed {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-msg {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+    }
+    .chat-sender { font-weight: 700; font-size: 0.75rem; margin-bottom: 4px; }
+    .chat-sender.red { color: var(--red-accent); }
+    .chat-sender.blue { color: var(--blue-accent); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span>HACKER SOCIETY</span>
+      <span class="logo-badge">Dual-Agent AI Cyber Range</span>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill"><div class="status-dot"></div> WS Live</div>
+      <div class="stat-pill">Turn: <strong id="turnCounter">1/3</strong></div>
+      <div class="stat-pill">Model: <strong id="modelName">Qwen 2.5 3B</strong></div>
+      <div class="stat-pill">Flag: <strong id="flagDisplay" style="font-family: monospace; color: var(--amber-accent);">flag_...</strong></div>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+
+    <!-- Topology -->
+    <div class="card">
+      <div class="card-header">Network Topology</div>
+      <div class="topology-container">
+
+        <div class="node-box red">
+          <div class="node-title"><span>Red Team Host</span><span>ATTACKER</span></div>
+          <div class="node-ip">10.0.1.100</div>
+          <div class="node-status" style="color: var(--red-accent);">ACTIVE PROBING</div>
+        </div>
+
+        <div class="node-box blue">
+          <div class="node-title"><span>DMZ Web Proxy</span><span>PUBLIC</span></div>
+          <div class="node-ip">10.0.1.10 (Nginx 80/443)</div>
+          <div class="node-status" style="color: var(--blue-accent);">ONLINE</div>
+        </div>
+
+        <div class="node-box amber">
+          <div class="node-title"><span>Honeypot Decoy</span><span>TRAP</span></div>
+          <div class="node-ip">10.0.1.20 (FTP/SSH Decoy)</div>
+          <div class="node-status" id="honeypotStatus" style="color: var(--text-muted);">MONITORING</div>
+        </div>
+
+        <div class="node-box blue">
+          <div class="node-title"><span>Internal Vault</span><span>TARGET</span></div>
+          <div class="node-ip">10.0.2.50 (MySQL Flag Store)</div>
+          <div class="node-status" style="color: var(--green-accent);">SECURE</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="card">
+      <div class="card-header">Real-Time Action & Execution Feed</div>
+      <div class="terminal-feed" id="terminalFeed">
+        <div class="terminal-line" style="color: var(--text-muted);">=== Hacker Society Autonomous Match Initialized ===</div>
+        <div class="terminal-line" style="color: var(--text-muted);">Waiting for turn actions...</div>
+      </div>
+    </div>
+
+    <!-- Team Chat & Log -->
+    <div class="card">
+      <div class="card-header">Team Chat & Tactical Log</div>
+      <div class="chat-feed" id="chatFeed">
+        <div class="chat-msg">
+          <div class="chat-sender blue">[BLUE_TEAM_CHANNEL]</div>
+          <div>Initial defenses active. Firewalls and service monitors initialized.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const ws = new WebSocket(`ws://${location.host}/ws/match`);
+    const term = document.getElementById('terminalFeed');
+    const chat = document.getElementById('chatFeed');
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      const { type, data } = msg;
+
+      if (type === 'turn_start') {
+        document.getElementById('turnCounter').innerText = `${data.turn}/${data.max_turns}`;
+        document.getElementById('flagDisplay').innerText = data.flag;
+        appendTermLine(`\n=== TURN ${data.turn} STARTING ===`, '#f59e0b');
+      } else if (type === 'action') {
+        const isRed = data.role === 'attacker';
+        const color = isRed ? 'var(--red-accent)' : 'var(--blue-accent)';
+        appendTermLine(`[${data.agent_id.toUpperCase()}]: ${data.action}`, color);
+        if (data.output) {
+          appendTermOut(data.output);
+        }
+      } else if (type === 'honeypot_alert') {
+        document.getElementById('honeypotStatus').innerText = '🚨 TRIPWIRE TRIGGERED';
+        document.getElementById('honeypotStatus').style.color = 'var(--red-accent)';
+        appendTermAlert(`🚨 [HONEYPOT TRIPWIRE]: Attacker probed decoy host 10.0.1.20!`);
+      } else if (type === 'team_chat') {
+        appendChatMsg(data.sender, data.message, data.role);
+      }
+    };
+
+    function appendTermLine(text, color) {
+      const div = document.createElement('div');
+      div.className = 'terminal-line';
+      div.style.color = color;
+      div.innerText = text;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function appendTermOut(text) {
+      const div = document.createElement('div');
+      div.className = 'term-out';
+      div.innerText = text;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function appendTermAlert(text) {
+      const div = document.createElement('div');
+      div.className = 'terminal-line term-alert';
+      div.innerText = text;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function appendChatMsg(sender, text, role) {
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      div.innerHTML = `<div class="chat-sender ${role}">[${sender.toUpperCase()}]</div><div>${text}</div>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>

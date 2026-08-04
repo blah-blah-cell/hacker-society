@@ -1,0 +1,77 @@
+Initializing Hacker Society Engine...
+  Attacker model : Qwen/Qwen2.5-1.5B-Instruct
+  Defender model : Qwen/Qwen2.5-1.5B-Instruct
+
+Select a vulnerability to expose on the Defender's public container:
+ 1. Anonymous FTP Server
+ 2. Weak SSH Credentials
+ 3. Open Redis Server
+ 4. Open Memcached
+ 5. SMB Guest Access
+ 6. Unauthenticated VNC
+ 7. Cleartext Telnet
+ 8. Misconfigured NFS
+ 9. Exposed Rsync Daemon
+10. Exposed Docker Socket (Simulated)
+11. Open Elasticsearch (Simulated)
+12. Misconfigured Proxy (Squid)
+13. Vulnerable Distcc
+14. Apache CouchDB (Simulated)
+15. Open MongoDB (Simulated)
+16. PostgreSQL/MySQL Default Creds (Simulated)
+17. SNMP Default Community
+18. Jenkins Script Console (Simulated)
+19. Apache Tomcat Manager (Simulated)
+20. Exposed etcd/Consul (Simulated)
+21. Hard Mode (Secure standard container)
+
+Enter choice [1-21] (default 1): MOCK DOCKER ENV: Bypassing real container setup for testing.
+
+--- MATCH 1a313b82 STARTING ---
+Max turns: 3
+Defender IPs: ['10.0.0.2']
+
+
+=== TURN 1 (Dynamic Flag: flag_df2143a3f8fc) ===
+>> defender_0 (defender) is acting...
+Tearing down environment...
+
+=== STDERR ===
+Fatal error during match: Internal Server Error
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/kaggle/working/hacker-society/src/main.py", line 271, in <module>
+    main()
+  File "/kaggle/working/hacker-society/src/main.py", line 258, in main
+    outcome = match.run(defender_ips=env_details["defender_ips"])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/hacker-society/src/match.py", line 143, in run
+    agent_id, action = future.result()
+                       ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/hacker-society/src/match.py", line 120, in run_agent
+    action = agent.take_turn(prompt)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/hacker-society/src/agent.py", line 206, in take_turn
+    response = self.client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/openai/_utils/_utils.py", line 287, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/openai/resources/chat/completions/completions.py", line 1211, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/openai/_base_client.py", line 1314, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/openai/_base_client.py", line 1087, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.InternalServerError: Internal Server Error

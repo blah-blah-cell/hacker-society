@@ -164,6 +164,13 @@ class Environment:
                 return "Firewall rules updated successfully."
             elif re.search(r'\b(fail2ban-client|systemctl)\b', cmd, re.I):
                 return "Service active and running."
+
+            # Honeypot decoy check (10.0.1.20)
+            if role == "attacker" and ("10.0.1.20" in cmd or "honeypot" in cmd.lower()):
+                self.honeypot_triggered = True
+                print("🚨 [HONEYPOT TRIPWIRE]: Attacker probed Honeypot Decoy (10.0.1.20)!")
+                return "TRAP TRIGGERED: Connected to 10.0.1.20 Decoy Host. Connection logged and alerted to Blue Team."
+
             return f"Command '{command}' executed successfully."
 
         container = (

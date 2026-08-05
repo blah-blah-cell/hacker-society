@@ -2,7 +2,7 @@
 fast_server.py — Autonomous Cyber Range LLM Server
 
 Configured for CPU/GPU universal execution. If CUDA is incompatible
-(e.g., Kaggle Tesla P100 sm_60 vs PyTorch sm_70+), falls back smoothly
+(e.g., older architectures missing modern kernels), falls back smoothly
 to CPU execution without crashing.
 """
 from fastapi import FastAPI

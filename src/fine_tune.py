@@ -35,7 +35,7 @@ def run_fine_tuning(dataset_path: str, model_name: str, output_dir: str, mode: s
         HAS_UNSLOTH = True
     except ImportError:
         HAS_UNSLOTH = False
-        print("Notice: Unsloth / TRL not installed in local env (running Kaggle/Colab simulation mode).")
+        print("Notice: Unsloth / TRL not installed in local env (running simulated training mode).")
 
     if HAS_UNSLOTH:
         print("\nLoading model with Unsloth 4-bit LoRA acceleration...")

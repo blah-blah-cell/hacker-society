@@ -1,0 +1,146 @@
+"""
+src/wizard.py
+
+Interactive onboarding wizard for Hacker Society.
+Automates model pulling, server startup, and match execution based on hardware profile.
+"""
+
+import os
+import sys
+import time
+import subprocess
+import requests
+
+def print_header():
+    print("=" * 65)
+    print(" WELCOME TO HACKER SOCIETY - INTERACTIVE ONBOARDING")
+    print("=" * 65)
+    print("Choose your hardware profile. We will automatically download the")
+    print("optimal model, start the inference server, and begin the match.\n")
+
+def print_table():
+    print("  [1] CPU Only / MacBook (Ollama)")
+    print("      Model: qwen2.5:1.5b (ultra-fast, lightweight)")
+    print("      Requires: Ollama installed locally\n")
+    
+    print("  [2] 8GB+ VRAM GPU (vLLM)")
+    print("      Model: Qwen/Qwen2.5-7B-Instruct-AWQ (fits in 8GB)")
+    print("      Requires: vLLM installed, CUDA GPU\n")
+    
+    print("  [3] Cloud API (OpenAI)")
+    print("      Model: gpt-4o-mini")
+    print("      Requires: OPENAI_API_KEY\n")
+    
+    print("  [4] Mock / Offline Mode (Test Run)")
+    print("      Model: mock-model")
+    print("      Requires: Nothing. Zero downloads, instant test.\n")
+
+def wait_for_server(url: str, timeout: int = 120):
+    print(f"\nWaiting for server to be ready at {url}...")
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            r = requests.get(url, timeout=2)
+            if r.status_code == 200:
+                print("[OK] Server is UP and READY!\n")
+                return True
+        except Exception:
+            pass
+        time.sleep(2)
+        print(".", end="", flush=True)
+    
+    print("\n[ERROR] Timed out waiting for server.")
+    return False
+
+def run_wizard():
+    print_header()
+    print_table()
+    
+    choice = input("Enter profile [1-4] (default: 4): ").strip()
+    if not choice:
+        choice = "4"
+        
+    server_proc = None
+    env = os.environ.copy()
+    model_args = []
+    
+    try:
+        if choice == "1":
+            print("\n[Profile 1] Selected: Ollama (CPU)")
+            print("Pulling qwen2.5:1.5b (this may take a minute)...")
+            subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
+            
+            print("\nStarting Ollama server in background...")
+            # ollama serve usually errors if already running, which is fine
+            server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            base_url = "http://localhost:11434/v1"
+            if not wait_for_server(f"{base_url}/models"):
+                print("Warning: Ollama might already be running or failed to start.")
+                
+            model_args = ["--model", "qwen2.5:1.5b", "--base-url", base_url]
+            
+        elif choice == "2":
+            print("\n[Profile 2] Selected: vLLM (GPU)")
+            model_name = "Qwen/Qwen2.5-7B-Instruct-AWQ"
+            print(f"Starting vLLM server with {model_name}...")
+            
+            server_proc = subprocess.Popen([
+                sys.executable, "-m", "vllm.entrypoints.openai.api_server",
+                "--model", model_name,
+                "--port", "8000",
+                "--gpu-memory-utilization", "0.85",
+                "--max-model-len", "4096"
+            ])
+            
+            base_url = "http://localhost:8000/v1"
+            if not wait_for_server(f"{base_url}/models", timeout=300):
+                sys.exit(1)
+                
+            model_args = ["--model", model_name, "--base-url", base_url]
+            
+        elif choice == "3":
+            print("\n[Profile 3] Selected: Cloud API (OpenAI)")
+            api_key = input("Enter your OpenAI API Key: ").strip()
+            if not api_key:
+                print("API Key is required for Cloud API. Exiting.")
+                sys.exit(1)
+                
+            env["OPENAI_API_KEY"] = api_key
+            model_args = ["--model", "gpt-4o-mini"]
+            
+        elif choice == "4":
+            print("\n[Profile 4] Selected: Mock / Offline Mode")
+            print("Starting local mock server...")
+            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            base_url = "http://localhost:8000/v1"
+            time.sleep(2) # Give mock server a second to bind
+            env["MOCK_DOCKER_NO_CONTAINERS"] = "1"
+            model_args = ["--model", "mock-model", "--base-url", base_url]
+            
+        else:
+            print("Invalid choice. Exiting.")
+            sys.exit(1)
+            
+        # Launch match
+        print("=" * 65)
+        print(" [LAUNCH] HACKER SOCIETY MATCH")
+        print("=" * 65)
+        
+        cmd = [sys.executable, "-m", "src.main"] + model_args
+        subprocess.run(cmd, env=env)
+        
+    except KeyboardInterrupt:
+        print("\nWizard aborted by user.")
+    finally:
+        if server_proc:
+            print("\nCleaning up background server...")
+            server_proc.terminate()
+            try:
+                server_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server_proc.kill()
+
+if __name__ == "__main__":
+    run_wizard()

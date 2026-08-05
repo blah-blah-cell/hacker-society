@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 hacker-society = "src.main:main"
+hacker-society-wizard = "src.wizard:run_wizard"
 
 [tool.setuptools.packages.find]
 where = ["."]

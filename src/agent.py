@@ -185,7 +185,7 @@ class Agent:
     # Main turn loop                                                       #
     # ------------------------------------------------------------------ #
 
-    def take_turn(self, instruction: str = None) -> str:
+    def take_turn(self, instruction: str | None = None) -> str:
         # Inject team context + instruction
         team_messages_context = ""
         if self.team_channel:
@@ -203,11 +203,12 @@ class Agent:
             self.add_message("user", f"{instruction or ''}\n{team_messages_context}")
 
         for _ in range(MAX_TOOL_ROUNDS):
+            kwargs = self.cfg.api_kwargs()
             response = self.client.chat.completions.create(
-                messages=self._pruned_messages(),
-                tools=self.tools,
+                messages=self._pruned_messages(),  # type: ignore
+                tools=self.tools,                  # type: ignore
                 tool_choice="auto",
-                **self.cfg.api_kwargs(),
+                **kwargs,                          # type: ignore
             )
 
             llm_message = response.choices[0].message
@@ -244,9 +245,10 @@ class Agent:
 
         # Exceeded MAX_TOOL_ROUNDS — force plain text response
         print(f"[{self.agent_id.upper()}] WARNING: hit MAX_TOOL_ROUNDS={MAX_TOOL_ROUNDS}, forcing final response.")
+        kwargs_final = {k: v for k, v in self.cfg.api_kwargs().items() if k != "tools"}
         final = self.client.chat.completions.create(
-            messages=self._pruned_messages(),
-            **{k: v for k, v in self.cfg.api_kwargs().items() if k != "tools"},
+            messages=self._pruned_messages(), # type: ignore
+            **kwargs_final,                   # type: ignore
         )
         final_msg = final.choices[0].message
         self.messages.append(final_msg)

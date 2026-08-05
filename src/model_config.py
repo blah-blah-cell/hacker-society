@@ -86,7 +86,7 @@ class ModelConfig:
     extra_params: dict = field(default_factory=dict)
 
     # Computed at post-init
-    _client: OpenAI = field(init=False, repr=False, default=None)
+    _client: Optional[OpenAI] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         # Resolve base_url: explicit > provider default > env var
@@ -116,6 +116,8 @@ class ModelConfig:
 
     @property
     def client(self) -> OpenAI:
+        if self._client is None:
+            raise ValueError("Client not initialized.")
         return self._client
 
     def api_kwargs(self) -> dict:
@@ -137,18 +139,20 @@ class ModelConfig:
         return cls(model=model, provider=provider, **kwargs)
 
     @classmethod
-    def from_url(cls, base_url: str, model: str, api_key: str = None, **kwargs) -> "ModelConfig":
+    def from_url(cls, base_url: str, model: str, api_key: Optional[str] = None, **kwargs) -> "ModelConfig":
         """Create a config for any arbitrary OpenAI-compatible endpoint."""
         return cls(model=model, base_url=base_url, api_key=api_key, **kwargs)
 
     @classmethod
-    def from_env(cls, model: str = None) -> "ModelConfig":
+    def from_env(cls, model: Optional[str] = None) -> "ModelConfig":
         """
         Build a config entirely from environment variables.
         Reads: LLM_MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_TEMPERATURE, LLM_MAX_TOKENS.
         """
+        # Ensure model is always a string
+        model_str = model or os.getenv("LLM_MODEL") or "gpt-4o-mini"
         return cls(
-            model=model or os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            model=model_str,
             base_url=os.getenv("LLM_BASE_URL"),
             api_key=os.getenv("LLM_API_KEY"),
             temperature=float(t) if (t := os.getenv("LLM_TEMPERATURE")) else None,

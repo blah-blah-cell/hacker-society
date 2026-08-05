@@ -10,6 +10,45 @@ import sys
 import time
 import subprocess
 import requests
+import platform
+import shutil
+
+def detect_hardware():
+    hw_info = {
+        "os": platform.system(),
+        "arch": platform.machine(),
+        "has_nvidia": False,
+        "vram_mb": 0,
+        "gpu_name": "None",
+        "recommended_profile": "1"
+    }
+    
+    if shutil.which("nvidia-smi"):
+        try:
+            hw_info["has_nvidia"] = True
+            # Get GPU Name
+            res_name = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                capture_output=True, text=True, check=True
+            )
+            hw_info["gpu_name"] = res_name.stdout.strip().split("\n")[0]
+            
+            # Get VRAM
+            res_mem = subprocess.run(
+                ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, check=True
+            )
+            hw_info["vram_mb"] = int(res_mem.stdout.strip().split("\n")[0])
+        except Exception:
+            pass
+
+    # Decision Matrix
+    if hw_info["has_nvidia"] and hw_info["vram_mb"] >= 7800:
+        hw_info["recommended_profile"] = "2"
+    else:
+        hw_info["recommended_profile"] = "1"
+        
+    return hw_info
 
 def print_header():
     print("=" * 65)
@@ -53,12 +92,24 @@ def wait_for_server(url: str, timeout: int = 120):
     return False
 
 def run_wizard():
+    hw = detect_hardware()
+    
     print_header()
+    
+    print("[HARDWARE DETECTED]")
+    print(f"OS : {hw['os']} ({hw['arch']})")
+    if hw["has_nvidia"]:
+        print(f"GPU: {hw['gpu_name']} ({hw['vram_mb']} MB VRAM)")
+    else:
+        print("GPU: No NVIDIA GPU detected (or nvidia-smi missing)")
+        
+    print(f"\n=> Recommended Profile: [{hw['recommended_profile']}]\n")
+    
     print_table()
     
-    choice = input("Enter profile [1-4] (default: 4): ").strip()
+    choice = input(f"Enter profile [1-4] (default: {hw['recommended_profile']}): ").strip()
     if not choice:
-        choice = "4"
+        choice = hw["recommended_profile"]
         
     server_proc = None
     env = os.environ.copy()
@@ -67,12 +118,15 @@ def run_wizard():
     try:
         if choice == "1":
             print("\n[Profile 1] Selected: Ollama (CPU)")
-            print("Pulling qwen2.5:1.5b (this may take a minute)...")
-            subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
-            
-            print("\nStarting Ollama server in background...")
-            # ollama serve usually errors if already running, which is fine
-            server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                print("Pulling qwen2.5:1.5b (this may take a minute)...")
+                subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
+                
+                print("\nStarting Ollama server in background...")
+                server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except FileNotFoundError:
+                print("\n[ERROR] 'ollama' command not found. Please install Ollama from https://ollama.com/")
+                sys.exit(1)
             
             base_url = "http://localhost:11434/v1"
             if not wait_for_server(f"{base_url}/models"):
@@ -85,13 +139,18 @@ def run_wizard():
             model_name = "Qwen/Qwen2.5-7B-Instruct-AWQ"
             print(f"Starting vLLM server with {model_name}...")
             
-            server_proc = subprocess.Popen([
-                sys.executable, "-m", "vllm.entrypoints.openai.api_server",
-                "--model", model_name,
-                "--port", "8000",
-                "--gpu-memory-utilization", "0.85",
-                "--max-model-len", "4096"
-            ])
+            try:
+                server_proc = subprocess.Popen([
+                    sys.executable, "-m", "vllm.entrypoints.openai.api_server",
+                    "--model", model_name,
+                    "--port", "8000",
+                    "--gpu-memory-utilization", "0.85",
+                    "--max-model-len", "4096"
+                ])
+            except Exception as e:
+                print(f"\n[ERROR] Failed to start vLLM: {e}")
+                print("Make sure it is installed: pip install vllm")
+                sys.exit(1)
             
             base_url = "http://localhost:8000/v1"
             if not wait_for_server(f"{base_url}/models", timeout=300):

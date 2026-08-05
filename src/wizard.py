@@ -91,6 +91,41 @@ def wait_for_server(url: str, timeout: int = 120):
     print("\n[ERROR] Timed out waiting for server.")
     return False
 
+def install_ollama():
+    print("\n[INSTALL] Ollama is missing.")
+    ans = input("Do you want to automatically install Ollama now? (requires sudo/admin) [y/N]: ").strip().lower()
+    if ans != 'y':
+        print("Please install Ollama manually from https://ollama.com/")
+        sys.exit(1)
+        
+    print("Installing Ollama...")
+    try:
+        if platform.system() == "Windows":
+            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)
+            print("Ollama installed successfully.")
+        else:
+            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
+            print("Ollama installed successfully.")
+    except Exception as e:
+        print(f"[ERROR] Failed to install Ollama: {e}")
+        print("Please install it manually from https://ollama.com/")
+        sys.exit(1)
+
+def install_vllm():
+    print("\n[INSTALL] vLLM is missing.")
+    ans = input("Do you want to automatically install vLLM via pip now? [y/N]: ").strip().lower()
+    if ans != 'y':
+        print("Please run: pip install vllm")
+        sys.exit(1)
+        
+    print("Installing vLLM (this will take a while)...")
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "vllm"], check=True)
+        print("vLLM installed successfully.")
+    except Exception as e:
+        print(f"[ERROR] Failed to install vLLM: {e}")
+        sys.exit(1)
+
 def run_wizard():
     hw = detect_hardware()
     
@@ -118,6 +153,9 @@ def run_wizard():
     try:
         if choice == "1":
             print("\n[Profile 1] Selected: Ollama (CPU)")
+            if not shutil.which("ollama"):
+                install_ollama()
+                
             try:
                 print("Pulling qwen2.5:1.5b (this may take a minute)...")
                 subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
@@ -125,7 +163,7 @@ def run_wizard():
                 print("\nStarting Ollama server in background...")
                 server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except FileNotFoundError:
-                print("\n[ERROR] 'ollama' command not found. Please install Ollama from https://ollama.com/")
+                print("\n[ERROR] 'ollama' command not found even after install attempt. Please restart your terminal.")
                 sys.exit(1)
             
             base_url = "http://localhost:11434/v1"
@@ -136,6 +174,13 @@ def run_wizard():
             
         elif choice == "2":
             print("\n[Profile 2] Selected: vLLM (GPU)")
+            
+            # Check if vllm is installed
+            try:
+                import vllm
+            except ImportError:
+                install_vllm()
+                
             model_name = "Qwen/Qwen2.5-7B-Instruct-AWQ"
             print(f"Starting vLLM server with {model_name}...")
             
@@ -149,7 +194,6 @@ def run_wizard():
                 ])
             except Exception as e:
                 print(f"\n[ERROR] Failed to start vLLM: {e}")
-                print("Make sure it is installed: pip install vllm")
                 sys.exit(1)
             
             base_url = "http://localhost:8000/v1"

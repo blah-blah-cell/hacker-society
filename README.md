@@ -127,6 +127,16 @@ sudo usermod -aG docker $USER && newgrp docker
 
 ## Usage
 
+### 🚀 Interactive Onboarding Wizard (Recommended)
+
+The easiest way to get started. The wizard will **auto-detect your hardware**, recommend the best setup (vLLM for GPU, Ollama for CPU), automatically install missing requirements, download the models, and launch the match:
+
+```bash
+hacker-society-wizard
+# OR 
+python -m src.wizard
+```
+
 ### Basic run (OpenAI cloud)
 
 ```bash

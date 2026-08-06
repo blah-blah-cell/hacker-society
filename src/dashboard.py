@@ -13,9 +13,11 @@ import json
 import os
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import HTTPException
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+import glob
 
 app = FastAPI(title="Hacker Society — Cyber Range Visualizer")
 
@@ -76,6 +78,46 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+@app.get("/api/logs")
+def get_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return JSONResponse(content={"logs": []})
+
+    logs = []
+    for log_file in glob.glob(str(logs_dir / "match_*_log.json")):
+        match_id = Path(log_file).name.replace("match_", "").replace("_log.json", "")
+        logs.append(match_id)
+    return JSONResponse(content={"logs": logs})
+
+@app.get("/api/logs/{match_id:path}")
+def get_match_log(match_id: str):
+    # Prevent path traversal
+    if "/" in match_id or "\\" in match_id or ".." in match_id:
+        raise HTTPException(status_code=400, detail="Invalid match_id format.")
+
+    logs_dir = BASE_DIR / "logs"
+    log_file = logs_dir / f"match_{match_id}_log.json"
+
+    # Check if we are still inside logs directory after resolution just in case
+    try:
+        resolved_log_file = log_file.resolve()
+        resolved_logs_dir = logs_dir.resolve()
+        if not str(resolved_log_file).startswith(str(resolved_logs_dir)):
+            raise HTTPException(status_code=400, detail="Invalid match_id format.")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match_id format.")
+
+    if not log_file.exists():
+        raise HTTPException(status_code=404, detail="Match log not found.")
+
+    with open(log_file, "r", encoding="utf-8") as f:
+        try:
+            log_data = json.load(f)
+            return JSONResponse(content=log_data)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=500, detail="Error reading match log.")
 
 
 def start_dashboard(host="0.0.0.0", port=8080):

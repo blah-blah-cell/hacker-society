@@ -140,6 +140,26 @@ class Environment:
             "defender_ips": defender_ips,
         }
 
+    def update_flag(self, new_flag: str):
+        """Dynamically update the flag in the DB container for the current turn."""
+        self.secret_flag = new_flag
+        if os.environ.get("MOCK_DOCKER_NO_CONTAINERS") or not self.db_container:
+            return
+
+        import tarfile
+        import io
+        import time
+
+        flag_bytes = new_flag.encode("utf-8")
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode='w') as tar:
+            tarinfo = tarfile.TarInfo(name="flag.txt")
+            tarinfo.size = len(flag_bytes)
+            tarinfo.mtime = int(time.time())
+            tar.addfile(tarinfo, io.BytesIO(flag_bytes))
+        tar_stream.seek(0)
+        self.db_container.put_archive("/tmp", tar_stream)
+
     def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
         """Executes a bash command in the specified environment and returns actual output."""
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):

@@ -124,6 +124,9 @@ class Match:
             turn_random_suffix = uuid.uuid4().hex[:12]
             self.secret_flag = f"flag_{turn_random_suffix}"
             self.environment.secret_flag = self.secret_flag
+            if hasattr(self.environment, 'update_flag'):
+                self.environment.update_flag(self.secret_flag)
+
             flag_hash = hashlib.sha256(self.secret_flag.encode()).hexdigest()
             print(f"\n=== TURN {turn} (Dynamic Flag: {self.secret_flag}) ===")
 
@@ -151,7 +154,7 @@ class Match:
             attacker_prompts = {a.agent_id: attacker_context for a in self.attackers}
             defender_prompts = {d.agent_id: defender_context for d in self.defenders}
 
-            turn_log = {"turn_number": self.current_turn, "events": []}
+            turn_log = {"turn_number": self.current_turn, "flag_hash": flag_hash, "events": []}
             self._attacker_won.clear()
 
             attacker_win_flag = False

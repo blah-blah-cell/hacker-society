@@ -24,3 +24,7 @@
 ## Phase 5: Scalability (Current)
 - Support large-scale matches with N attackers vs M defenders.
 - Support Kubernetes or Swarm for distributed container orchestration.
+
+## Phase 7: Web UI Match Replay Viewer (Current)
+- [x] Implement a REST API to serve match logs.
+- [ ] Build a frontend to visualize match events.

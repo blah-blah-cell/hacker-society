@@ -181,7 +181,7 @@ class ModelConfig:
             cfg = ModelConfig.from_yaml("configs.yaml", "attacker")
         """
         try:
-            import yaml
+            import yaml # type: ignore
         except ImportError as exc:
             raise ImportError(
                 "PyYAML is required for YAML config loading: pip install pyyaml"

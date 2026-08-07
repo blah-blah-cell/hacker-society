@@ -45,6 +45,10 @@ class Match:
     # ------------------------------------------------------------------ #
     # Shaped rewards helpers                                              #
     # ------------------------------------------------------------------ #
+    def _redact_secret(self, value: str) -> str:
+        """Keep the vault flag out of terminal, dashboard, and JSONL output."""
+        return (value or "").replace(self.secret_flag, "[REDACTED_FLAG]")
+
     def _compute_shaped_reward(self, action: str, role: str, won: bool) -> float:
         """
         Returns a shaped per-action reward signal.
@@ -120,16 +124,14 @@ class Match:
 
         for turn in range(1, self.max_turns + 1):
             self.current_turn = turn
-            # Dynamic Per-Turn Random Flag Generation
-            turn_random_suffix = uuid.uuid4().hex[:12]
-            self.secret_flag = f"flag_{turn_random_suffix}"
-            self.environment.secret_flag = self.secret_flag
-            flag_hash = hashlib.sha256(self.secret_flag.encode()).hexdigest()
-            print(f"\n=== TURN {turn} (Dynamic Flag: {self.secret_flag}) ===")
+            # Keep the challenge flag stable for the entire match. The value was
+            # injected into the vault during environment setup, so rotating it here
+            # would desynchronise win validation from the container state.
+            print(f"\n=== TURN {turn} ===")
 
             try:
                 from src.dashboard import broadcast_match_event
-                broadcast_match_event("turn_start", {"turn": turn, "max_turns": self.max_turns, "flag": self.secret_flag})
+                broadcast_match_event("turn_start", {"turn": turn, "max_turns": self.max_turns})
             except Exception:
                 pass
 
@@ -162,11 +164,12 @@ class Match:
                     return agent.agent_id, ""
                 print(f">> {agent.agent_id} ({role}) is acting...")
                 action = agent.take_turn(prompt)
-                print(f"[{agent.agent_id.upper()}]: {action}")
+                safe_action = self._redact_secret(action)
+                print(f"[{agent.agent_id.upper()}]: {safe_action}")
 
                 try:
                     from src.dashboard import broadcast_match_event
-                    broadcast_match_event("action", {"agent_id": agent.agent_id, "role": role, "action": action})
+                    broadcast_match_event("action", {"agent_id": agent.agent_id, "role": role, "action": safe_action})
                     if getattr(self.environment, "honeypot_triggered", False):
                         broadcast_match_event("honeypot_alert", {"triggered_by": agent.agent_id})
                 except Exception:
@@ -177,7 +180,7 @@ class Match:
                     turn_log["events"].append({
                         "role": role,
                         "agent_id": agent.agent_id,
-                        "action": action,
+                        "action": safe_action,
                         "shaped_reward": r,
                     })
                     shaped_rewards[role] = shaped_rewards.get(role, 0.0) + r

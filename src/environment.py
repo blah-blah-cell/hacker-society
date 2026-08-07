@@ -68,7 +68,7 @@ class Environment:
 
         print(f"Creating internal network: {self.internal_network_name}")
         self.internal_network = self.client.networks.create(
-            self.internal_network_name, driver="bridge")
+            self.internal_network_name, driver="bridge", internal=True)
 
         print("Starting internal DB container...")
         self.db_container = self.client.containers.run(

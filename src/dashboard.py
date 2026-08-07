@@ -5,7 +5,7 @@ Serves a live glassmorphic web dashboard with WebSockets broadcasting real-time:
 - Network topology status (DMZ, Honeypot, Vault)
 - Live terminal execution feed
 - Agent team chat channel
-- Match stats and dynamic flag tracker
+- Match stats and challenge progress
 """
 
 import asyncio

@@ -78,7 +78,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-def start_dashboard(host="0.0.0.0", port=8080):
+def start_dashboard(host="127.0.0.1", port=8080):
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY REAL-TIME CYBER RANGE DASHBOARD")
     print(f"   Open in browser: http://localhost:{port}")

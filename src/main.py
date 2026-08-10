@@ -107,6 +107,7 @@ Examples
     p.add_argument("--turns",     type=int, default=5,  help="Max turns per match")
     p.add_argument("--attackers", type=int, default=1,  help="Number of attacker agents")
     p.add_argument("--defenders", type=int, default=1,  help="Number of defender agents")
+    p.add_argument("--list-matches", action="store_true", help="List all past matches and their outcomes")
 
     # Config file (highest priority)
     p.add_argument("--config", type=str, default=None,
@@ -173,6 +174,36 @@ def main():
     load_dotenv()
     parser = _build_parser()
     args   = parser.parse_args()
+
+    if getattr(args, "list_matches", False):
+        import glob
+        import json
+        log_files = glob.glob("match_*_log.json")
+        log_files += glob.glob("logs/match_*_log.json")
+
+        if not log_files:
+            print("No match logs found.")
+            sys.exit(0)
+
+        print(f"{'Match ID':<12} | {'Timestamp':<28} | {'Outcome':<15}")
+        print("-" * 62)
+        for log_file in log_files:
+            try:
+                with open(log_file, "r") as f:
+                    data = json.load(f)
+                    match_id = data.get("match_id", "Unknown")
+                    timestamp = data.get("timestamp", "Unknown")
+                    outcome = data.get("outcome", "Unknown")
+
+                    if outcome == "attacker_win":
+                        outcome = "Attacker Win"
+                    elif outcome == "defender_win":
+                        outcome = "Defender Win"
+
+                    print(f"{match_id:<12} | {timestamp:<28} | {outcome:<15}")
+            except Exception as e:
+                print(f"Failed to read {log_file}: {e}")
+        sys.exit(0)
 
     attacker_cfg = _build_config(args, "attacker", args.config)
     defender_cfg = _build_config(args, "defender", args.config)

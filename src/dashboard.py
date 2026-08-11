@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -65,6 +65,39 @@ def get_dashboard():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Hacker Society Web Dashboard — index.html not found</h1>")
+
+
+@app.get("/api/matches")
+def list_matches():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return JSONResponse(content={"matches": []})
+
+    matches = []
+    for f in logs_dir.glob("match_*_log.json"):
+        matches.append(f.name)
+    return JSONResponse(content={"matches": sorted(matches)})
+
+@app.get("/api/matches/{match_id}")
+def get_match(match_id: str):
+    logs_dir = BASE_DIR / "logs"
+    if not match_id.endswith(".json"):
+        match_id = f"match_{match_id}_log.json"
+
+    # Prevent path traversal
+    if "/" in match_id or "\\" in match_id or ".." in match_id:
+        return JSONResponse(status_code=400, content={"error": "Invalid match ID"})
+
+    log_file = logs_dir / match_id
+    if not log_file.exists():
+        return JSONResponse(status_code=404, content={"error": "Match log not found"})
+
+    try:
+        with open(log_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return JSONResponse(content=data)
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=500, content={"error": "Failed to parse match log"})
 
 
 @app.websocket("/ws/match")

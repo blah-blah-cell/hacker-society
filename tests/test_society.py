@@ -7,9 +7,9 @@ from src.model_config import ModelConfig
 def test_environment_mock_docker_init(monkeypatch):
     monkeypatch.setenv("MOCK_DOCKER_NO_CONTAINERS", "1")
     env = Environment()
-    assert env.client is None
+    assert env.client is None  # nosec B101
     res = env.execute_in_container("attacker_0", "attacker", "cat /tmp/flag.txt")
-    assert res == "0123456789abcdef0123456789abcdef"
+    assert res == "0123456789abcdef0123456789abcdef"  # nosec B101
 
 def test_agent_context_pinning(monkeypatch):
     monkeypatch.setenv("MOCK_DOCKER_NO_CONTAINERS", "1")
@@ -22,6 +22,6 @@ def test_agent_context_pinning(monkeypatch):
         agent.add_message("user", f"Follow up message {i}")
         
     pruned = agent._pruned_messages()
-    assert pruned[0]["content"] == "SYSTEM PROMPT"
-    assert pruned[1]["content"] == "INITIAL OBJECTIVE"
-    assert len(pruned) <= agent.HISTORY_WINDOW + 2
+    assert pruned[0]["content"] == "SYSTEM PROMPT"  # nosec B101
+    assert pruned[1]["content"] == "INITIAL OBJECTIVE"  # nosec B101
+    assert len(pruned) <= agent.HISTORY_WINDOW + 2  # nosec B101

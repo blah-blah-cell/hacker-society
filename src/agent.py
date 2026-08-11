@@ -234,7 +234,7 @@ class Agent:
                             self.team_channel.append({"sender_id": self.agent_id, "message": msg})
                             self.add_message("user", "Message broadcasted to team.")
                     except Exception as e:
-                        pass
+                        print(f"[{self.agent_id.upper()} PARSE ERROR]: {e}")  # nosec B110
 
             if not llm_message.tool_calls:
                 return llm_message.content if llm_message.content is not None else ""

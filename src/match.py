@@ -133,7 +133,7 @@ class Match:
                 from src.dashboard import broadcast_match_event
                 broadcast_match_event("turn_start", {"turn": turn, "max_turns": self.max_turns})
             except Exception:
-                pass
+                pass  # nosec B110
 
             # Build per-turn context with history of previous actions and their outputs
             attacker_history = [e['action'] for t in self.logs["turns"] for e in t['events'] if e['role'] == 'attacker']
@@ -173,7 +173,7 @@ class Match:
                     if getattr(self.environment, "honeypot_triggered", False):
                         broadcast_match_event("honeypot_alert", {"triggered_by": agent.agent_id})
                 except Exception:
-                    pass
+                    pass  # nosec B110
 
                 r = self._compute_shaped_reward(action, role, won=False)
                 with self.lock:

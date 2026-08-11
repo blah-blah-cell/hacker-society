@@ -21,10 +21,10 @@ app = FastAPI(title="Hacker Society — Cyber Range Visualizer")
 
 # WebSocket Connection Manager
 class ConnectionManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: list[WebSocket] = []
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active_connections.append(websocket)
         print(f"WebVisualizer Client Connected: {websocket.client}")
@@ -50,7 +50,7 @@ def broadcast_match_event(event_type: str, data: dict):
         if loop.is_running():
             asyncio.create_task(manager.broadcast({"type": event_type, "data": data}))
     except Exception:
-        pass
+        pass  # nosec B110
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,7 +78,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-def start_dashboard(host="0.0.0.0", port=8080):
+def start_dashboard(host="127.0.0.1", port=8080):
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY REAL-TIME CYBER RANGE DASHBOARD")
     print(f"   Open in browser: http://localhost:{port}")

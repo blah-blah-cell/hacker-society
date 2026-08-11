@@ -20,7 +20,8 @@ def export_to_sharegpt(logs_dir="logs", output_file="dataset_sft.jsonl"):
         try:
             with open(log_file, "r") as f:
                 match_data = json.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"Skipping {log_file} due to error: {e}")  # nosec B112
             continue
 
         rewards = match_data.get("rewards", {"attacker": 0.0, "defender": 0.0})
@@ -66,7 +67,8 @@ def export_to_dpo(logs_dir="logs", output_file="dataset_dpo.jsonl"):
         try:
             with open(log_file, "r") as f:
                 match_data = json.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"Skipping {log_file} due to error: {e}")  # nosec B112
             continue
 
         turns = match_data.get("turns", [])

@@ -107,6 +107,7 @@ Examples
     p.add_argument("--turns",     type=int, default=5,  help="Max turns per match")
     p.add_argument("--attackers", type=int, default=1,  help="Number of attacker agents")
     p.add_argument("--defenders", type=int, default=1,  help="Number of defender agents")
+    p.add_argument("--disable-memory", action="store_true", help="Disable persistent memory store")
 
     # Config file (highest priority)
     p.add_argument("--config", type=str, default=None,
@@ -169,7 +170,7 @@ VULN_MENU = [
 ]
 
 
-def main():
+def main() -> None:
     load_dotenv()
     parser = _build_parser()
     args   = parser.parse_args()
@@ -204,6 +205,8 @@ def main():
         )
 
         def _memory_str(role: str) -> str:
+            if args.disable_memory:
+                return "Memory disabled for this match."
             mems = memory_store.get_memory(role)[-5:]
             return "\n".join(f"- {m}" for m in mems) if mems else "No past memories yet."
 
@@ -253,7 +256,7 @@ def main():
             attackers, defenders, env,
             secret_flag  = secret_flag,
             max_turns    = args.turns,
-            memory_store = memory_store,
+            memory_store = None if args.disable_memory else memory_store,
         )
         outcome = match.run(defender_ips=env_details["defender_ips"])
 

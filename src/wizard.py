@@ -215,7 +215,7 @@ def run_wizard():
         elif choice == "4":
             print("\n[Profile 4] Selected: Mock / Offline Mode")
             print("Starting local mock server...")
-            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
             
             base_url = "http://localhost:8000/v1"
             time.sleep(2) # Give mock server a second to bind
@@ -232,7 +232,7 @@ def run_wizard():
         print("=" * 65)
         
         cmd = [sys.executable, "-m", "src.main"] + model_args
-        subprocess.run(cmd, env=env)
+        subprocess.run(cmd, env=env)  # nosec B603
         
     except KeyboardInterrupt:
         print("\nWizard aborted by user.")

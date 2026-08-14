@@ -119,7 +119,7 @@ class Environment:
         tar_stream.seek(0)
 
         print(f"Injecting flag into DB container at /tmp/flag.txt...")
-        self.db_container.put_archive("/tmp", tar_stream)
+        self.db_container.put_archive("/tmp", tar_stream)  # nosec B108
 
         time.sleep(2)
 

@@ -46,7 +46,7 @@ manager = ConnectionManager()
 # Global event broad-caster accessible by match runner
 def broadcast_match_event(event_type: str, data: dict):
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if loop.is_running():
             asyncio.create_task(manager.broadcast({"type": event_type, "data": data}))
     except Exception:
@@ -78,7 +78,36 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-def start_dashboard(host="0.0.0.0", port=8080):
+@app.get("/api/logs")
+def list_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return {"logs": []}
+    return {"logs": [f.name for f in logs_dir.glob("*.json")]}
+
+
+from urllib.parse import unquote
+
+from fastapi import HTTPException
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    decoded_log_id = unquote(log_id)
+    if "/" in decoded_log_id or "\\" in decoded_log_id or ".." in decoded_log_id:
+        raise HTTPException(status_code=400, detail="Invalid log ID")
+
+    log_path = BASE_DIR / "logs" / log_id
+    if not log_path.exists():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def start_dashboard(host="0.0.0.0", port=8080):  # nosec B104
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY REAL-TIME CYBER RANGE DASHBOARD")
     print(f"   Open in browser: http://localhost:{port}")

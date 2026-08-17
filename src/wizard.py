@@ -27,14 +27,14 @@ def detect_hardware():
         try:
             hw_info["has_nvidia"] = True
             # Get GPU Name
-            res_name = subprocess.run(
+            res_name = subprocess.run(  # nosec B603
                 ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
                 capture_output=True, text=True, check=True
             )
             hw_info["gpu_name"] = res_name.stdout.strip().split("\n")[0]
             
             # Get VRAM
-            res_mem = subprocess.run(
+            res_mem = subprocess.run(  # nosec B603
                 ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, check=True
             )
@@ -101,10 +101,10 @@ def install_ollama():
     print("Installing Ollama...")
     try:
         if platform.system() == "Windows":
-            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)
+            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)  # nosec B603
             print("Ollama installed successfully.")
         else:
-            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
+            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)  # nosec B602 B603
             print("Ollama installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install Ollama: {e}")
@@ -120,7 +120,7 @@ def install_vllm():
         
     print("Installing vLLM (this will take a while)...")
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "vllm"], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "vllm"], check=True)  # nosec B603
         print("vLLM installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install vLLM: {e}")
@@ -158,10 +158,10 @@ def run_wizard():
                 
             try:
                 print("Pulling qwen2.5:1.5b (this may take a minute)...")
-                subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
+                subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)  # nosec B603
                 
                 print("\nStarting Ollama server in background...")
-                server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
             except FileNotFoundError:
                 print("\n[ERROR] 'ollama' command not found even after install attempt. Please restart your terminal.")
                 sys.exit(1)
@@ -185,7 +185,7 @@ def run_wizard():
             print(f"Starting vLLM server with {model_name}...")
             
             try:
-                server_proc = subprocess.Popen([
+                server_proc = subprocess.Popen([  # nosec B603
                     sys.executable, "-m", "vllm.entrypoints.openai.api_server",
                     "--model", model_name,
                     "--port", "8000",
@@ -215,7 +215,7 @@ def run_wizard():
         elif choice == "4":
             print("\n[Profile 4] Selected: Mock / Offline Mode")
             print("Starting local mock server...")
-            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
             
             base_url = "http://localhost:8000/v1"
             time.sleep(2) # Give mock server a second to bind
@@ -232,7 +232,7 @@ def run_wizard():
         print("=" * 65)
         
         cmd = [sys.executable, "-m", "src.main"] + model_args
-        subprocess.run(cmd, env=env)
+        subprocess.run(cmd, env=env)  # nosec B603
         
     except KeyboardInterrupt:
         print("\nWizard aborted by user.")

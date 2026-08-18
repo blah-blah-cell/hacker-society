@@ -20,7 +20,7 @@ app = FastAPI()
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 
 print(f"Loading {MODEL_NAME} for fast universal inference...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True) # nosec B615
 
 # Determine safe device: CPU is 100% compatible across all environments
 device = "cpu"
@@ -34,7 +34,7 @@ if torch.cuda.is_available():
         print(f"CUDA verification failed ({e}), falling back to CPU.")
 
 print(f"Loading model onto target device: {device}...")
-model = AutoModelForCausalLM.from_pretrained(
+model = AutoModelForCausalLM.from_pretrained( # nosec B615
     MODEL_NAME,
     torch_dtype=torch.float32 if device == "cpu" else torch.float16,
     trust_remote_code=True

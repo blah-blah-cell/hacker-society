@@ -12,7 +12,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -46,7 +46,7 @@ manager = ConnectionManager()
 # Global event broad-caster accessible by match runner
 def broadcast_match_event(event_type: str, data: dict):
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if loop.is_running():
             asyncio.create_task(manager.broadcast({"type": event_type, "data": data}))
     except Exception:
@@ -66,6 +66,33 @@ def get_dashboard():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Hacker Society Web Dashboard — index.html not found</h1>")
 
+@app.get("/api/logs")
+def list_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return {"logs": []}
+
+    logs = []
+    for file in logs_dir.iterdir():
+        if file.is_file() and file.suffix == ".json":
+            logs.append(file.name)
+    return {"logs": logs}
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id path parameter")
+
+    log_file = BASE_DIR / "logs" / log_id
+    if not log_file.exists():
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    try:
+        with open(log_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Error decoding log file")
+
 
 @app.websocket("/ws/match")
 async def websocket_endpoint(websocket: WebSocket):
@@ -78,7 +105,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-def start_dashboard(host="0.0.0.0", port=8080):
+def start_dashboard(host="0.0.0.0", port=8080): # nosec B104
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY REAL-TIME CYBER RANGE DASHBOARD")
     print(f"   Open in browser: http://localhost:{port}")

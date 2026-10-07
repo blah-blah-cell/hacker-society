@@ -102,6 +102,11 @@ def install_ollama():
     try:
         if platform.system() == "Windows":
             subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)
+            if os.path.exists("OllamaSetup.exe"):
+                try:
+                    os.remove("OllamaSetup.exe")
+                except Exception:
+                    pass
             print("Ollama installed successfully.")
         else:
             subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)

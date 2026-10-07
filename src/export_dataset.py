@@ -28,20 +28,32 @@ def export_to_sharegpt(logs_dir="logs", output_file="dataset_sft.jsonl"):
 
         # Attacker trace
         attacker_conversations = []
+        defender_conversations = []
         for turn in turns:
             turn_num = turn.get("turn_number", 1)
             for event in turn.get("events", []):
-                if event.get("role") == "attacker":
-                    action = event.get("action", "")
-                    if action:
-                        attacker_conversations.append({
-                            "from": "human",
-                            "value": f"Turn {turn_num}: Execute next action to compromise target and exfiltrate flag."
-                        })
-                        attacker_conversations.append({
-                            "from": "gpt",
-                            "value": action
-                        })
+                role = event.get("role")
+                action = event.get("action", "")
+                if not action:
+                    continue
+                if role == "attacker":
+                    attacker_conversations.append({
+                        "from": "human",
+                        "value": f"Turn {turn_num}: Execute next action to compromise target and exfiltrate flag."
+                    })
+                    attacker_conversations.append({
+                        "from": "gpt",
+                        "value": action
+                    })
+                elif role == "defender":
+                    defender_conversations.append({
+                        "from": "human",
+                        "value": f"Turn {turn_num}: Harden environment, monitor connections, and prevent unauthorized exfiltration."
+                    })
+                    defender_conversations.append({
+                        "from": "gpt",
+                        "value": action
+                    })
 
         if attacker_conversations:
             dataset.append({
@@ -49,6 +61,13 @@ def export_to_sharegpt(logs_dir="logs", output_file="dataset_sft.jsonl"):
                 "agent_role": "attacker",
                 "conversations": attacker_conversations,
                 "reward": rewards.get("attacker", 0.0)
+            })
+        if defender_conversations:
+            dataset.append({
+                "match_id": match_data.get("match_id"),
+                "agent_role": "defender",
+                "conversations": defender_conversations,
+                "reward": rewards.get("defender", 0.0)
             })
 
     with open(output_file, "w") as out:
@@ -70,19 +89,21 @@ def export_to_dpo(logs_dir="logs", output_file="dataset_dpo.jsonl"):
             continue
 
         turns = match_data.get("turns", [])
+        role_all_events: dict[str, list] = {"attacker": [], "defender": []}
+
         for turn in turns:
             turn_num = turn.get("turn_number", 1)
             events = turn.get("events", [])
 
-            # Group events by role
             attacker_events = [e for e in events if e.get("role") == "attacker"]
             defender_events = [e for e in events if e.get("role") == "defender"]
 
             for role, evs in [("attacker", attacker_events), ("defender", defender_events)]:
                 if not evs:
                     continue
+                role_all_events[role].extend(evs)
 
-                # Sort by shaped_reward
+                # Intra-turn DPO pairs (for multi-agent matches)
                 sorted_evs = sorted(evs, key=lambda x: x.get("shaped_reward", 0.0), reverse=True)
                 if len(sorted_evs) >= 2 and sorted_evs[0].get("shaped_reward", 0.0) > sorted_evs[-1].get("shaped_reward", 0.0):
                     prompt = f"Role: {role.upper()} | Turn: {turn_num}\nChoose the optimal bash command for this tactical scenario."
@@ -94,6 +115,23 @@ def export_to_dpo(logs_dir="logs", output_file="dataset_dpo.jsonl"):
                             "prompt": prompt,
                             "chosen": chosen,
                             "rejected": rejected,
+                            "match_id": match_data.get("match_id"),
+                            "role": role
+                        })
+
+        # Inter-turn / Cross-action DPO pairs for 1v1 matches
+        for role, all_evs in role_all_events.items():
+            if len(all_evs) >= 2:
+                high_rew = [e for e in all_evs if e.get("shaped_reward", 0.0) > 0.1]
+                low_rew = [e for e in all_evs if e.get("shaped_reward", 0.0) <= 0.0]
+                if high_rew and low_rew:
+                    best = max(high_rew, key=lambda x: x.get("shaped_reward", 0.0))
+                    worst = min(low_rew, key=lambda x: x.get("shaped_reward", 0.0))
+                    if best.get("action") and worst.get("action") and best["action"] != worst["action"]:
+                        dpo_dataset.append({
+                            "prompt": f"Role: {role.upper()}\nEvaluate tactical trajectory and select the most effective action.",
+                            "chosen": best["action"],
+                            "rejected": worst["action"],
                             "match_id": match_data.get("match_id"),
                             "role": role
                         })

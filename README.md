@@ -329,26 +329,52 @@ python -m src.fine_tune \
 
 ---
 
+## Testing & Quality Assurance
+
+Hacker Society includes a full-lifecycle test suite covering edge cases, concurrency, and end-to-end multi-agent execution:
+
+```bash
+# Run complete test suite with coverage
+pytest --cov=src --cov-report=term-missing
+
+# Run end-to-end integration pipeline (Mock server -> Match -> Replay -> Dataset Export -> Fine-Tune)
+pytest -v tests/test_actual_e2e.py
+
+# Run robustness & edge-case stress test suite
+pytest -v tests/test_robustness.py
+```
+
+---
+
 ## Project Structure
 
 ```
 hacker-society/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py              # CLI entry point
-│   ├── agent.py             # LLM agent (multi-round tool loop, history pruning)
-│   ├── environment.py       # Docker orchestration
-│   ├── match.py             # Turn engine, shaped rewards, thread safety
-│   ├── memory.py            # Persistent memory store (thread-safe)
+│   ├── main.py              # CLI entry point (TUI vulnerability selection)
+│   ├── wizard.py            # Zero-config onboarding wizard & auto hardware detection
+│   ├── agent.py             # LLM agent (resilient dirty-JSON parser, API retries, tool loop)
+│   ├── environment.py       # Docker orchestration & honeypot tripwire engine
+│   ├── match.py             # Turn engine, shaped rewards, thread safety, atomic logs
+│   ├── memory.py            # Persistent memory store (thread-safe, TF-IDF ranking)
+│   ├── dashboard.py         # Real-time WebSocket cyber range visualizer
+│   ├── replay.py            # Smart CLI replay engine (auto-detects latest match)
 │   ├── mock_llm_server.py   # Offline OpenAI-compatible mock server
-│   ├── export_dataset.py    # Log → JSONL dataset exporter
-│   └── fine_tune.py         # Fine-tune pipeline scaffolding
+│   ├── model_config.py      # Provider resolution (OpenAI, Groq, Ollama, vLLM, YAML)
+│   ├── export_dataset.py    # Log → ShareGPT (SFT) & Pairwise DPO dataset exporter
+│   └── fine_tune.py         # DPO & SFT training pipeline
+├── tests/
+│   ├── test_actual_e2e.py   # Full-lifecycle multi-agent pipeline integration test
+│   ├── test_robustness.py   # Adversarial stress tests (dirty JSON, honeypots, concurrency)
+│   ├── test_match_security.py # Vault flag isolation & redaction tests
+│   └── test_replay.py       # Match log replay tests
 ├── docker/
 │   ├── Dockerfile.attacker
 │   ├── Dockerfile.defender
 │   ├── Dockerfile.db
 │   └── start_vuln.py        # Vulnerability setup dispatcher (21 scenarios)
-├── logs/                    # Auto-created; match JSON logs written here
+├── logs/                    # Auto-created; atomic match JSON logs written here
 ├── memory.json              # Persistent agent memory across matches
 ├── requirements.txt
 ├── pyproject.toml
@@ -364,10 +390,13 @@ hacker-society/
 | 1 | ✅ Done | Core environment, 1v1 agent combat |
 | 2 | ✅ Done | Multi-container pivoting, 21 vulnerability scenarios |
 | 3 | ✅ Done | N-vs-M multi-agent, team communication, shaped rewards |
-| 4 | 🔧 Scaffolded | Docker Swarm / Kubernetes distributed orchestration |
-| 5 | 🔧 Scaffolded | Real Unsloth/HF DPO fine-tuning loop |
-| 6 | 📋 Planned | Per-team model routing (attacker vs defender on separate GPUs) |
-| 7 | 📋 Planned | Web UI match replay viewer |
+| 4 | ✅ Done | Zero-config Onboarding Wizard with hardware auto-detection |
+| 5 | ✅ Done | Resilient ReAct engine (dirty JSON repair, exponential API retries) |
+| 6 | ✅ Done | Universal Honeypot & Decoy Tripwire engine with proactive blue-team alert forwarding |
+| 7 | ✅ Done | Thread-safe Real-time WebSocket Cyber Range Visualizer |
+| 8 | ✅ Done | Smart Replay CLI with auto-discovery & enriched telemetry |
+| 9 | ✅ Done | SFT + Pairwise DPO dataset exporters & simulated/Unsloth fine-tuning loop |
+| 10 | 🔧 Scaffolded | Docker Swarm / Kubernetes distributed orchestration |
 
 ---
 

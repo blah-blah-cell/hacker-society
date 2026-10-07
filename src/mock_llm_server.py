@@ -104,7 +104,15 @@ class MockLLMHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
 
-if __name__ == "__main__":
-    with socketserver.TCPServer(("", PORT), MockLLMHandler) as httpd:
-        print(f"Mock LLM Server listening on port {PORT}")
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
+
+def run_mock_server(port=PORT):
+    with ReusableTCPServer(("", port), MockLLMHandler) as httpd:
+        print(f"Mock LLM Server listening on port {port}")
         httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    run_mock_server()

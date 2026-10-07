@@ -10,7 +10,7 @@ import json
 import os
 import sys
 
-def run_fine_tuning(dataset_path: str, model_name: str, output_dir: str, mode: str):
+def run_fine_tuning(dataset_path: str, model_name: str, output_dir: str, mode: str = "dpo"):
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY FINE-TUNING PIPELINE ({mode.upper()})")
     print(f"=======================================================")

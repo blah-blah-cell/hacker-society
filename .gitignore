@@ -10,3 +10,5 @@ match_*.txt
 models/
 memory.json
 kaggle_*/
+.coverage
+.pytest_cache/

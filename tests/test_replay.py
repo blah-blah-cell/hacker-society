@@ -83,5 +83,12 @@ class TestReplay(unittest.TestCase):
         self.assertIn(f"Error: {bad_json_path} is not a valid JSON file.", output)
         mock_exit.assert_called_with(1)
 
+    def test_find_latest_log(self):
+        from src.replay import find_latest_log
+        self.assertIsNone(find_latest_log("nonexistent_directory_12345"))
+        # Test finding in temp_dir
+        latest = find_latest_log(self.temp_dir.name)
+        self.assertEqual(latest, self.log_file_path)
+
 if __name__ == '__main__':
     unittest.main()

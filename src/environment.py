@@ -142,6 +142,13 @@ class Environment:
 
     def execute_in_container(self, agent_id: str, role: str, command: str) -> str:
         """Executes a bash command in the specified environment and returns actual output."""
+        # Universal Honeypot decoy check (10.0.1.20)
+        if role == "attacker" and ("10.0.1.20" in command or "honeypot" in command.lower()):
+            self.honeypot_triggered = True
+            print("🚨 [HONEYPOT TRIPWIRE]: Attacker probed Honeypot Decoy (10.0.1.20)!")
+            if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
+                return "TRAP TRIGGERED: Connected to 10.0.1.20 Decoy Host. Connection logged and alerted to Blue Team."
+
         if os.environ.get("MOCK_DOCKER_NO_CONTAINERS"):
             import re
             cmd = command.strip()
@@ -166,12 +173,6 @@ class Environment:
             elif re.search(r'\b(fail2ban-client|systemctl)\b', cmd, re.I):
                 return "Service active and running."
 
-            # Honeypot decoy check (10.0.1.20)
-            if role == "attacker" and ("10.0.1.20" in cmd or "honeypot" in cmd.lower()):
-                self.honeypot_triggered = True
-                print("🚨 [HONEYPOT TRIPWIRE]: Attacker probed Honeypot Decoy (10.0.1.20)!")
-                return "TRAP TRIGGERED: Connected to 10.0.1.20 Decoy Host. Connection logged and alerted to Blue Team."
-
             return f"Command '{command}' executed successfully."
 
         container = (
@@ -184,25 +185,25 @@ class Environment:
 
         try:
             exec_result = container.exec_run(["bash", "-c", command])
-            output = exec_result.output.decode("utf-8")
+            output = exec_result.output.decode("utf-8", errors="replace") if exec_result.output else ""
             return output if output else f"Command '{command}' executed successfully with no output."
         except Exception as e:
             return f"Execution error: {str(e)}"
 
     def teardown(self):
         print("Tearing down environment...")
-        for name, container in self.attacker_containers.items():
+        for name, container in list(self.attacker_containers.items()):
             try:
                 container.stop(timeout=1)
-                container.remove()
+                container.remove(force=True)
                 print(f"Attacker container {name} removed.")
             except Exception as e:
                 print(f"Error removing attacker {name}: {e}")
 
-        for name, container in self.defender_containers.items():
+        for name, container in list(self.defender_containers.items()):
             try:
                 container.stop(timeout=1)
-                container.remove()
+                container.remove(force=True)
                 print(f"Defender container {name} removed.")
             except Exception as e:
                 print(f"Error removing defender {name}: {e}")
@@ -210,13 +211,19 @@ class Environment:
         if self.db_container:
             try:
                 self.db_container.stop(timeout=1)
-                self.db_container.remove()
+                self.db_container.remove(force=True)
                 print("DB container removed.")
             except Exception as e:
                 print(f"Error removing DB container: {e}")
 
         if self.public_network:
             try:
+                self.public_network.reload()
+                for c in getattr(self.public_network, "containers", []):
+                    try:
+                        self.public_network.disconnect(c, force=True)
+                    except Exception:
+                        pass
                 self.public_network.remove()
                 print("Public network removed.")
             except Exception as e:
@@ -224,6 +231,12 @@ class Environment:
 
         if self.internal_network:
             try:
+                self.internal_network.reload()
+                for c in getattr(self.internal_network, "containers", []):
+                    try:
+                        self.internal_network.disconnect(c, force=True)
+                    except Exception:
+                        pass
                 self.internal_network.remove()
                 print("Internal network removed.")
             except Exception as e:

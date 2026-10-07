@@ -11,13 +11,17 @@ Serves a live glassmorphic web dashboard with WebSockets broadcasting real-time:
 import asyncio
 import json
 import os
+import queue
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 import uvicorn
 
-app = FastAPI(title="Hacker Society — Cyber Range Visualizer")
+# Thread-safe event queue for cross-thread event dispatching
+_event_queue: queue.Queue = queue.Queue(maxsize=5000)
+_recent_events: list[dict] = []
+_MAX_RECENT_EVENTS = 100
 
 # WebSocket Connection Manager
 class ConnectionManager:
@@ -28,6 +32,12 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
         print(f"WebVisualizer Client Connected: {websocket.client}")
+        # Send historical events so client immediately renders current state
+        for event in _recent_events:
+            try:
+                await websocket.send_json(event)
+            except Exception:
+                pass
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
@@ -35,6 +45,11 @@ class ConnectionManager:
             print("WebVisualizer Client Disconnected.")
 
     async def broadcast(self, message: dict):
+        # Buffer recent events for newly connected clients
+        _recent_events.append(message)
+        if len(_recent_events) > _MAX_RECENT_EVENTS:
+            _recent_events.pop(0)
+
         for connection in list(self.active_connections):
             try:
                 await connection.send_json(message)
@@ -43,12 +58,30 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# Global event broad-caster accessible by match runner
+# Background task to drain thread-safe queue to WebSocket clients
+async def _queue_drainer():
+    while True:
+        try:
+            while not _event_queue.empty():
+                item = _event_queue.get_nowait()
+                await manager.broadcast(item)
+        except Exception:
+            pass
+        await asyncio.sleep(0.05)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start queue drainer
+    task = asyncio.create_task(_queue_drainer())
+    yield
+    task.cancel()
+
+app = FastAPI(title="Hacker Society — Cyber Range Visualizer", lifespan=lifespan)
+
+# Global thread-safe event broadcaster accessible from any thread
 def broadcast_match_event(event_type: str, data: dict):
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(manager.broadcast({"type": event_type, "data": data}))
+        _event_queue.put_nowait({"type": event_type, "data": data})
     except Exception:
         pass
 

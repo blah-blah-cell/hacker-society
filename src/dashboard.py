@@ -91,6 +91,33 @@ WEB_DIR = BASE_DIR / "web"
 os.makedirs(WEB_DIR, exist_ok=True)
 
 
+from fastapi import HTTPException
+
+@app.get("/api/logs")
+def list_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return []
+
+    logs = []
+    for file in logs_dir.glob("*.json"):
+        logs.append({"log_id": file.name})
+    return logs
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id")
+
+    logs_dir = BASE_DIR / "logs"
+    log_path = logs_dir / log_id
+
+    if not log_path.exists():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 @app.get("/")
 def get_dashboard():
     index_path = WEB_DIR / "index.html"
@@ -111,7 +138,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-def start_dashboard(host="0.0.0.0", port=8080):
+def start_dashboard(host="0.0.0.0", port=8080): # nosec
     print(f"\n=======================================================")
     print(f"   HACKER SOCIETY REAL-TIME CYBER RANGE DASHBOARD")
     print(f"   Open in browser: http://localhost:{port}")

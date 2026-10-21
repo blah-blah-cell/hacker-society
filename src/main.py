@@ -104,6 +104,7 @@ Examples
     )
 
     # Match settings
+    p.add_argument("--version", action="version", version="Hacker Society 1.0.0", help="Show program's version number and exit")
     p.add_argument("--turns",     type=int, default=5,  help="Max turns per match")
     p.add_argument("--attackers", type=int, default=1,  help="Number of attacker agents")
     p.add_argument("--defenders", type=int, default=1,  help="Number of defender agents")

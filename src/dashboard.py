@@ -13,8 +13,8 @@ import json
 import os
 import queue
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse
 from contextlib import asynccontextmanager
 import uvicorn
 
@@ -98,6 +98,31 @@ def get_dashboard():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Hacker Society Web Dashboard — index.html not found</h1>")
+
+
+@app.get("/api/logs")
+def get_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return []
+
+    log_files = []
+    for f in logs_dir.iterdir():
+        if f.is_file() and f.name.endswith(".json"):
+            log_files.append({"id": f.name})
+    return log_files
+
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log ID")
+
+    log_path = BASE_DIR / "logs" / log_id
+    if not log_path.exists() or not log_path.is_file():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    return FileResponse(log_path)
 
 
 @app.websocket("/ws/match")

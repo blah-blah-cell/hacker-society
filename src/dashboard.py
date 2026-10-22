@@ -25,7 +25,7 @@ _MAX_RECENT_EVENTS = 100
 
 # WebSocket Connection Manager
 class ConnectionManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
@@ -91,13 +91,58 @@ WEB_DIR = BASE_DIR / "web"
 os.makedirs(WEB_DIR, exist_ok=True)
 
 
+from fastapi import HTTPException
+
 @app.get("/")
-def get_dashboard():
+def get_dashboard() -> HTMLResponse:
     index_path = WEB_DIR / "index.html"
     if index_path.exists():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Hacker Society Web Dashboard — index.html not found</h1>")
+
+@app.get("/api/logs")
+def get_logs() -> list[dict]:
+    """Retrieve metadata for all match logs."""
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return []
+
+    logs = []
+    for log_file in logs_dir.glob("match_*_log.json"):
+        try:
+            with open(log_file, "r") as f:
+                data = json.load(f)
+                logs.append({
+                    "log_id": log_file.name,
+                    "match_id": data.get("match_id"),
+                    "timestamp": log_file.stat().st_mtime,
+                    "turns": len(data.get("turns", [])),
+                    "outcome": data.get("outcome", "unknown")
+                })
+        except Exception:
+            continue
+    return sorted(logs, key=lambda x: x["timestamp"], reverse=True)
+
+
+@app.get("/api/logs/{log_id:path}")
+def get_log_by_id(log_id: str) -> dict:
+    """Retrieve full details of a specific match log."""
+    # Path traversal validation
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log ID")
+
+    logs_dir = BASE_DIR / "logs"
+    log_file = logs_dir / log_id
+
+    if not log_file.exists() or not log_file.is_file():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    try:
+        with open(log_file, "r") as f:
+            return json.load(f)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to read log file")
 
 
 @app.websocket("/ws/match")

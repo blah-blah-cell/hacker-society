@@ -13,8 +13,8 @@ import json
 import os
 import queue
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from contextlib import asynccontextmanager
 import uvicorn
 
@@ -88,8 +88,35 @@ def broadcast_match_event(event_type: str, data: dict):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
+LOGS_DIR = BASE_DIR / "logs"
 os.makedirs(WEB_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
 
+
+@app.get("/api/logs")
+def list_logs():
+    try:
+        logs = [f.name for f in LOGS_DIR.iterdir() if f.is_file() and f.name.endswith(".json")]
+        return JSONResponse(content={"logs": logs})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id format")
+
+    log_path = LOGS_DIR / log_id
+    if not log_path.exists() or not log_path.is_file() or not log_id.endswith(".json"):
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            return JSONResponse(content=json.load(f))
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON in log file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def get_dashboard():

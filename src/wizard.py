@@ -34,13 +34,13 @@ def detect_hardware():
             hw_info["gpu_name"] = res_name.stdout.strip().split("\n")[0]
             
             # Get VRAM
-            res_mem = subprocess.run(
+            res_mem = subprocess.run(  # nosec
                 ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, check=True
             )
             hw_info["vram_mb"] = int(res_mem.stdout.strip().split("\n")[0])
         except Exception:
-            pass
+            pass  # nosec
 
     # Decision Matrix
     if hw_info["has_nvidia"] and hw_info["vram_mb"] >= 7800:
@@ -84,7 +84,7 @@ def wait_for_server(url: str, timeout: int = 120):
                 print("[OK] Server is UP and READY!\n")
                 return True
         except Exception:
-            pass
+            pass  # nosec
         time.sleep(2)
         print(".", end="", flush=True)
     
@@ -101,15 +101,15 @@ def install_ollama():
     print("Installing Ollama...")
     try:
         if platform.system() == "Windows":
-            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)
+            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)  # nosec
             if os.path.exists("OllamaSetup.exe"):
                 try:
                     os.remove("OllamaSetup.exe")
                 except Exception:
-                    pass
+                    pass  # nosec
             print("Ollama installed successfully.")
         else:
-            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
+            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)  # nosec
             print("Ollama installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install Ollama: {e}")

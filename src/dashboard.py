@@ -100,6 +100,38 @@ def get_dashboard():
     return HTMLResponse(content="<h1>Hacker Society Web Dashboard — index.html not found</h1>")
 
 
+@app.get("/api/logs")
+def list_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return {"logs": []}
+
+    log_files = []
+    for file in os.listdir(logs_dir):
+        if file.endswith(".json") and file.startswith("match_"):
+            log_files.append(file)
+
+    return {"logs": sorted(log_files)}
+
+from fastapi import HTTPException
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id")
+
+    logs_dir = BASE_DIR / "logs"
+    log_path = logs_dir / log_id
+
+    if not log_path.exists() or not log_path.is_file():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON in log file")
+
 @app.websocket("/ws/match")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)

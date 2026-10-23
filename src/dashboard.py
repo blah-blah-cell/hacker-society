@@ -13,7 +13,7 @@ import json
 import os
 import queue
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 import uvicorn
@@ -88,7 +88,37 @@ def broadcast_match_event(event_type: str, data: dict):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
+LOGS_DIR = BASE_DIR / "logs"
 os.makedirs(WEB_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+
+@app.get("/api/logs")
+def list_logs():
+    """Return a list of log filenames from the logs directory."""
+    if not LOGS_DIR.exists():
+        return []
+    logs = [f.name for f in LOGS_DIR.iterdir() if f.is_file() and f.name.endswith(".json")]
+    return sorted(logs)
+
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    """Return the content of a specific log file as JSON."""
+    # Security validation against directory traversal
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id format")
+
+    log_path = LOGS_DIR / log_id
+    if not log_path.exists() or not log_path.is_file():
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")

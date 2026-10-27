@@ -13,7 +13,7 @@ import json
 import os
 import queue
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 import uvicorn
@@ -88,7 +88,36 @@ def broadcast_match_event(event_type: str, data: dict):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
+LOGS_DIR = BASE_DIR / "logs"
 os.makedirs(WEB_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+
+@app.get("/api/logs")
+def get_logs():
+    """Returns a list of available JSON match logs."""
+    logs = []
+    if LOGS_DIR.exists():
+        for log_file in LOGS_DIR.glob("*.json"):
+            logs.append(log_file.name)
+    return {"logs": logs}
+
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    """Returns the JSON content of a specific match log."""
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        raise HTTPException(status_code=400, detail="Invalid log_id: path traversal attempt detected.")
+
+    log_path = LOGS_DIR / log_id
+    if not log_path.exists() or not log_path.is_file():
+        raise HTTPException(status_code=404, detail="Log file not found.")
+
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read log file: {str(e)}")
 
 
 @app.get("/")

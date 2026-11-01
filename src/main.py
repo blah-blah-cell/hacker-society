@@ -108,6 +108,7 @@ Examples
     p.add_argument("--turns",     type=int, default=5,  help="Max turns per match")
     p.add_argument("--attackers", type=int, default=1,  help="Number of attacker agents")
     p.add_argument("--defenders", type=int, default=1,  help="Number of defender agents")
+    p.add_argument("--vuln",      type=int, default=None, help="Bypass interactive vulnerability selection menu")
 
     # Config file (highest priority)
     p.add_argument("--config", type=str, default=None,
@@ -182,16 +183,22 @@ def main():
     print(f"  Attacker model : {attacker_cfg.model}")
     print(f"  Defender model : {defender_cfg.model}")
 
-    print("\nSelect a vulnerability to expose on the Defender's public container:")
-    for num, label in VULN_MENU:
-        print(f"{num:>2}. {label}")
-
-    try:
-        vuln_choice = int(input("\nEnter choice [1-21] (default 1): ") or "1")
+    if args.vuln is not None:
+        vuln_choice = args.vuln
         if vuln_choice < 1 or vuln_choice > 21:
+            print(f"Warning: Invalid vulnerability choice {vuln_choice}, defaulting to 1.")
             vuln_choice = 1
-    except ValueError:
-        vuln_choice = 1
+    else:
+        print("\nSelect a vulnerability to expose on the Defender's public container:")
+        for num, label in VULN_MENU:
+            print(f"{num:>2}. {label}")
+
+        try:
+            vuln_choice = int(input("\nEnter choice [1-21] (default 1): ") or "1")
+            if vuln_choice < 1 or vuln_choice > 21:
+                vuln_choice = 1
+        except ValueError:
+            vuln_choice = 1
 
     env          = Environment()
     secret_flag  = uuid.uuid4().hex

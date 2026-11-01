@@ -91,6 +91,35 @@ WEB_DIR = BASE_DIR / "web"
 os.makedirs(WEB_DIR, exist_ok=True)
 
 
+@app.get("/api/logs")
+def get_logs():
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return []
+
+    log_files = []
+    for f in logs_dir.iterdir():
+        if f.is_file() and f.name.endswith(".json"):
+            log_files.append({"id": f.name})
+
+    return log_files
+
+
+@app.get("/api/logs/{log_id:path}")
+def get_log(log_id: str):
+    if "/" in log_id or "\\" in log_id or ".." in log_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid log ID format.")
+
+    log_path = BASE_DIR / "logs" / log_id
+    if not log_path.exists() or not log_path.is_file():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Log not found.")
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 @app.get("/")
 def get_dashboard():
     index_path = WEB_DIR / "index.html"

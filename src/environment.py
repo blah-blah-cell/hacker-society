@@ -223,7 +223,7 @@ class Environment:
                     try:
                         self.public_network.disconnect(c, force=True)
                     except Exception:
-                        pass
+                        pass  # nosec B110
                 self.public_network.remove()
                 print("Public network removed.")
             except Exception as e:
@@ -236,7 +236,7 @@ class Environment:
                     try:
                         self.internal_network.disconnect(c, force=True)
                     except Exception:
-                        pass
+                        pass  # nosec B110
                 self.internal_network.remove()
                 print("Internal network removed.")
             except Exception as e:

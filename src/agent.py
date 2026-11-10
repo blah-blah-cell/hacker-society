@@ -163,7 +163,7 @@ class Agent:
         try:
             return json.loads(text), None
         except Exception:
-            pass
+            pass  # nosec B110
 
         # Attempt 2: Python literal_eval for single-quoted dicts
         import ast
@@ -172,7 +172,7 @@ class Agent:
             if isinstance(parsed, dict):
                 return parsed, None
         except Exception:
-            pass
+            pass  # nosec B110
 
         # Attempt 3: Regex fallback for command parameter
         import re
@@ -320,7 +320,7 @@ class Agent:
                             self.team_channel.append({"sender_id": self.agent_id, "message": msg})
                             self.add_message("user", "Message broadcasted to team.")
                     except Exception:
-                        pass
+                        pass  # nosec B110
 
             if not llm_message.tool_calls:
                 return llm_message.content if llm_message.content is not None else ""

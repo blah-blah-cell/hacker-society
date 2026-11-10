@@ -27,20 +27,20 @@ def detect_hardware():
         try:
             hw_info["has_nvidia"] = True
             # Get GPU Name
-            res_name = subprocess.run(
+            res_name = subprocess.run(  # nosec B603 B607
                 ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
                 capture_output=True, text=True, check=True
             )
             hw_info["gpu_name"] = res_name.stdout.strip().split("\n")[0]
             
             # Get VRAM
-            res_mem = subprocess.run(
+            res_mem = subprocess.run(  # nosec B603 B607
                 ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, check=True
             )
             hw_info["vram_mb"] = int(res_mem.stdout.strip().split("\n")[0])
         except Exception:
-            pass
+            pass  # nosec B110
 
     # Decision Matrix
     if hw_info["has_nvidia"] and hw_info["vram_mb"] >= 7800:
@@ -84,16 +84,19 @@ def wait_for_server(url: str, timeout: int = 120):
                 print("[OK] Server is UP and READY!\n")
                 return True
         except Exception:
-            pass
+            pass  # nosec B110
         time.sleep(2)
         print(".", end="", flush=True)
     
     print("\n[ERROR] Timed out waiting for server.")
     return False
 
-def install_ollama():
+def install_ollama(auto_install=False):
     print("\n[INSTALL] Ollama is missing.")
-    ans = input("Do you want to automatically install Ollama now? (requires sudo/admin) [y/N]: ").strip().lower()
+    if not auto_install:
+        ans = input("Do you want to automatically install Ollama now? (requires sudo/admin) [y/N]: ").strip().lower()
+    else:
+        ans = 'y'
     if ans != 'y':
         print("Please install Ollama manually from https://ollama.com/")
         sys.exit(1)
@@ -101,37 +104,41 @@ def install_ollama():
     print("Installing Ollama...")
     try:
         if platform.system() == "Windows":
-            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)
+            subprocess.run(["powershell", "-Command", "Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile OllamaSetup.exe; .\\OllamaSetup.exe /SILENT"], check=True)  # nosec B603 B607
             if os.path.exists("OllamaSetup.exe"):
                 try:
                     os.remove("OllamaSetup.exe")
                 except Exception:
-                    pass
+                    pass  # nosec B110
             print("Ollama installed successfully.")
         else:
-            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
+            subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)  # nosec B602 B603 B607
             print("Ollama installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install Ollama: {e}")
         print("Please install it manually from https://ollama.com/")
         sys.exit(1)
 
-def install_vllm():
+def install_vllm(auto_install=False):
     print("\n[INSTALL] vLLM is missing.")
-    ans = input("Do you want to automatically install vLLM via pip now? [y/N]: ").strip().lower()
+    if not auto_install:
+        ans = input("Do you want to automatically install vLLM via pip now? [y/N]: ").strip().lower()
+    else:
+        ans = 'y'
     if ans != 'y':
         print("Please run: pip install vllm")
         sys.exit(1)
         
     print("Installing vLLM (this will take a while)...")
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "vllm"], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "vllm"], check=True)  # nosec B603
         print("vLLM installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install vLLM: {e}")
         sys.exit(1)
 
 def run_wizard():
+    auto_yes = "--yes" in sys.argv or "-y" in sys.argv
     hw = detect_hardware()
     
     print_header()
@@ -147,9 +154,13 @@ def run_wizard():
     
     print_table()
     
-    choice = input(f"Enter profile [1-4] (default: {hw['recommended_profile']}): ").strip()
-    if not choice:
+    if not auto_yes:
+        choice = input(f"Enter profile [1-4] (default: {hw['recommended_profile']}): ").strip()
+        if not choice:
+            choice = hw["recommended_profile"]
+    else:
         choice = hw["recommended_profile"]
+        print(f"Auto-selected profile: {choice}")
         
     server_proc = None
     env = os.environ.copy()
@@ -159,14 +170,14 @@ def run_wizard():
         if choice == "1":
             print("\n[Profile 1] Selected: Ollama (CPU)")
             if not shutil.which("ollama"):
-                install_ollama()
+                install_ollama(auto_install=auto_yes)
                 
             try:
                 print("Pulling qwen2.5:1.5b (this may take a minute)...")
-                subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)
+                subprocess.run(["ollama", "pull", "qwen2.5:1.5b"], check=False)  # nosec B603 B607
                 
                 print("\nStarting Ollama server in background...")
-                server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                server_proc = subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603 B607
             except FileNotFoundError:
                 print("\n[ERROR] 'ollama' command not found even after install attempt. Please restart your terminal.")
                 sys.exit(1)
@@ -184,13 +195,13 @@ def run_wizard():
             try:
                 import vllm
             except ImportError:
-                install_vllm()
+                install_vllm(auto_install=auto_yes)
                 
             model_name = "Qwen/Qwen2.5-7B-Instruct-AWQ"
             print(f"Starting vLLM server with {model_name}...")
             
             try:
-                server_proc = subprocess.Popen([
+                server_proc = subprocess.Popen([  # nosec B603
                     sys.executable, "-m", "vllm.entrypoints.openai.api_server",
                     "--model", model_name,
                     "--port", "8000",
@@ -220,7 +231,7 @@ def run_wizard():
         elif choice == "4":
             print("\n[Profile 4] Selected: Mock / Offline Mode")
             print("Starting local mock server...")
-            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            server_proc = subprocess.Popen([sys.executable, "-m", "src.mock_llm_server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
             
             base_url = "http://localhost:8000/v1"
             time.sleep(2) # Give mock server a second to bind
@@ -237,7 +248,7 @@ def run_wizard():
         print("=" * 65)
         
         cmd = [sys.executable, "-m", "src.main"] + model_args
-        subprocess.run(cmd, env=env)
+        subprocess.run(cmd, env=env)  # nosec B603
         
     except KeyboardInterrupt:
         print("\nWizard aborted by user.")

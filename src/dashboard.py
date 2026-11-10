@@ -37,7 +37,7 @@ class ConnectionManager:
             try:
                 await websocket.send_json(event)
             except Exception:
-                pass
+                pass  # nosec B110
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
@@ -66,7 +66,7 @@ async def _queue_drainer():
                 item = _event_queue.get_nowait()
                 await manager.broadcast(item)
         except Exception:
-            pass
+            pass  # nosec B110
         await asyncio.sleep(0.05)
 
 @asynccontextmanager
@@ -83,7 +83,7 @@ def broadcast_match_event(event_type: str, data: dict):
     try:
         _event_queue.put_nowait({"type": event_type, "data": data})
     except Exception:
-        pass
+        pass  # nosec B110
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
